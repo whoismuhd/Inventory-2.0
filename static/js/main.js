@@ -478,39 +478,6 @@ function initSessionMonitoring() {
         }
     });
     
-    // Also check periodically when page is visible (in case storage event doesn't fire)
-    let checkInterval = null;
-    function startPeriodicCheck() {
-        if (checkInterval) return;
-        checkInterval = setInterval(() => {
-            if (!document.hidden) {
-                checkSessionChange();
-            }
-        }, 1000); // Check every second
-    }
-    
-    function stopPeriodicCheck() {
-        if (checkInterval) {
-            clearInterval(checkInterval);
-            checkInterval = null;
-        }
-    }
-    
-    // Start checking when page is visible
-    if (!document.hidden) {
-        startPeriodicCheck();
-    }
-    
-    // Monitor visibility changes
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden) {
-            stopPeriodicCheck();
-        } else {
-            startPeriodicCheck();
-            checkSessionChange(); // Immediate check when tab becomes visible
-        }
-    });
-    
     // Initial check
     checkSessionChange();
 }
