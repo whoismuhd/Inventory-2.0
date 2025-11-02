@@ -226,7 +226,7 @@ if __name__ == '__main__':
     with app.app_context():
         init_db()
     # Only run development server locally
-    # Production uses gunicorn (see render.yaml and gunicorn_config.py)
+    # Production uses gunicorn (see DEPLOYMENT.md for Render setup)
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=False, port=port, host='0.0.0.0')
 
