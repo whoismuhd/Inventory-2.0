@@ -367,11 +367,12 @@ function initSessionMonitoring() {
     // Function to check if session has changed
     function checkSessionChange() {
         const storedToken = localStorage.getItem('session_token_' + TAB_ID);
-        const lastGlobalToken = localStorage.getItem('last_session_token');
         
-        // If the global last session token differs from our tab's token, session changed
-        if (lastGlobalToken && storedToken && lastGlobalToken !== storedToken && lastGlobalToken !== CURRENT_SESSION_TOKEN) {
-            // Session was changed in another tab
+        // If the current session token (from Flask) differs from our stored token, session changed
+        // This means another tab logged in and changed the Flask session
+        if (storedToken && CURRENT_SESSION_TOKEN && storedToken !== CURRENT_SESSION_TOKEN) {
+            // Session was changed in another tab - show warning and update stored token
+            localStorage.setItem('session_token_' + TAB_ID, CURRENT_SESSION_TOKEN);
             showSessionChangeWarning();
         }
     }
@@ -429,9 +430,51 @@ function initSessionMonitoring() {
     }
     
     // Listen for storage events (triggered when another tab changes localStorage)
+    // When another tab logs in, it updates 'last_session_token', triggering this event
     window.addEventListener('storage', function(e) {
-        if (e.key === 'last_session_token') {
+        if (e.key === 'last_session_token' || e.key === 'session_token_' + TAB_ID) {
+            // Session changed in another tab - reload page to get new session token from Flask
             checkSessionChange();
+        }
+    });
+    
+    // Also poll the session API endpoint periodically to detect changes
+    // This is a backup in case storage events don't fire reliably
+    let sessionCheckInterval = setInterval(() => {
+        fetch('/api/session_info')
+            .then(response => response.json())
+            .then(data => {
+                if (data.logged_in && data.session_token) {
+                    const storedToken = localStorage.getItem('session_token_' + TAB_ID);
+                    if (storedToken && data.session_token !== storedToken) {
+                        // Session changed - reload to get new session data
+                        window.location.reload();
+                    }
+                }
+            })
+            .catch(() => {
+                // Ignore errors (might not be logged in)
+            });
+    }, 2000); // Check every 2 seconds
+    
+    // Clear interval when page is hidden to save resources
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            clearInterval(sessionCheckInterval);
+        } else {
+            sessionCheckInterval = setInterval(() => {
+                fetch('/api/session_info')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.logged_in && data.session_token) {
+                            const storedToken = localStorage.getItem('session_token_' + TAB_ID);
+                            if (storedToken && data.session_token !== storedToken) {
+                                window.location.reload();
+                            }
+                        }
+                    })
+                    .catch(() => {});
+            }, 2000);
         }
     });
     
