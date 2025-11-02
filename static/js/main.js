@@ -101,6 +101,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize tab scrolling
     initTabScrolling();
+    
+    // Initialize session monitoring for tab detection
+    initSessionMonitoring();
 });
 
 // Tab Scrolling Functionality

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import os
 import csv
 import io
+import uuid
 from functools import wraps
 from database import db, init_db
 from models import (
@@ -142,6 +143,8 @@ def login():
             session['user_name'] = 'Global Administrator'
             session['project_site'] = None
             session['is_global_admin'] = True
+            # Generate unique session token for tab detection
+            session['session_token'] = str(uuid.uuid4())
             
             # Log access
             log = AccessLog(
@@ -170,6 +173,8 @@ def login():
                 session['project_site'] = site.name
                 session['assigned_project_site'] = site.name  # Permanently assigned, cannot be changed
                 session['is_global_admin'] = False
+                # Generate unique session token for tab detection
+                session['session_token'] = str(uuid.uuid4())
                 
                 log = AccessLog(
                     user=session['user_name'],
@@ -201,6 +206,20 @@ def logout():
     """Logout and clear session"""
     session.clear()
     return redirect(url_for('login'))
+
+@app.route('/api/session_info')
+def session_info():
+    """API endpoint to get current session information"""
+    if 'user_id' not in session:
+        return jsonify({'logged_in': False})
+    
+    return jsonify({
+        'logged_in': True,
+        'session_token': session.get('session_token'),
+        'user_role': session.get('user_role'),
+        'is_global_admin': session.get('is_global_admin'),
+        'project_site': session.get('project_site')
+    })
 
 @app.route('/dashboard')
 @require_login
