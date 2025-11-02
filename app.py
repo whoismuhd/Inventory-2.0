@@ -125,11 +125,23 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page"""
+    # Check if there's an existing active session
+    existing_session = None
+    if 'user_id' in session:
+        existing_session = {
+            'user_name': session.get('user_name'),
+            'user_role': session.get('user_role'),
+            'project_site': session.get('project_site')
+        }
+    
     if request.method == 'POST':
         access_code = request.form.get('access_code', '').strip()
         
+        # Check if user wants to override existing session
+        override_session = request.form.get('override_session', 'false') == 'true'
+        
         if not access_code:
-            return render_template('login.html', error='Access code is required')
+            return render_template('login.html', error='Access code is required', existing_session=existing_session)
         
         # Check global admin code
         global_admin = AccessCode.query.filter_by(
