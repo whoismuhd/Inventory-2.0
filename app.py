@@ -41,6 +41,17 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
+# Initialize database tables on app startup (works with gunicorn)
+# This ensures tables exist before any requests are processed
+with app.app_context():
+    try:
+        db.create_all()
+        init_db()
+    except Exception as e:
+        # Don't crash if database connection fails during startup
+        # Will retry on first request
+        print(f"Initial database setup: {e}")
+
 # Template filters
 @app.template_filter('format_currency')
 def format_currency_filter(amount):
@@ -58,7 +69,12 @@ def format_number_filter(num):
 @app.context_processor
 def inject_project_sites():
     from models import ProjectSite
-    return dict(project_sites=ProjectSite.query.all())
+    try:
+        # Only query if database is initialized and tables exist
+        return dict(project_sites=ProjectSite.query.all())
+    except Exception:
+        # Return empty list if database isn't ready yet (during startup)
+        return dict(project_sites=[])
 
 # Constants
 PROPERTY_TYPES = ['Flats', 'Terraces', 'Semi-detached', 'Fully-detached']
