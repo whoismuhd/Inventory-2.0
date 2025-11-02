@@ -24,7 +24,19 @@ from routes import (
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inventory.db'
+
+# Database configuration - supports both SQLite (local) and PostgreSQL (production)
+database_url = os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI')
+if database_url:
+    # Render provides DATABASE_URL, but SQLAlchemy expects SQLALCHEMY_DATABASE_URI
+    # Convert postgres:// to postgresql:// if needed (for newer SQLAlchemy)
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Default to SQLite for local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inventory.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -213,5 +225,8 @@ app.add_url_rule('/api/check_notifications', 'check_notifications', check_notifi
 if __name__ == '__main__':
     with app.app_context():
         init_db()
-    app.run(debug=True, port=5001, host='127.0.0.1')
+    # Only run development server locally
+    # Production uses gunicorn (see render.yaml and gunicorn_config.py)
+    port = int(os.environ.get('PORT', 5001))
+    app.run(debug=False, port=port, host='0.0.0.0')
 
