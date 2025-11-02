@@ -1,0 +1,571 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .project-site-item {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+    
+    .project-site-item:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .project-site-info {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        flex: 1;
+    }
+    
+    .project-site-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--text-color);
+        margin: 0;
+    }
+    
+    .access-code-display {
+        color: #10b981;
+        font-weight: 500;
+        font-size: 0.95rem;
+        font-family: 'Courier New', monospace;
+        background-color: rgba(16, 185, 129, 0.1);
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    .project-site-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .project-site-actions .btn {
+        font-size: 0.875rem;
+        padding: 0.4rem 0.75rem;
+    }
+    
+    .add-project-form {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .form-label-bold {
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Admin Code Display Box */
+    .admin-code-display-box {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border-radius: 8px;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        margin-bottom: 2rem;
+    }
+    
+    .admin-code-label {
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+    }
+    
+    .admin-code-value {
+        font-weight: 600;
+        color: #ffffff;
+        font-size: 1.1rem;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Change Admin Code Section */
+    .change-admin-code-section {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+    
+    .change-admin-code-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--text-color);
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .change-admin-code-title i {
+        color: var(--primary-color);
+    }
+    
+    .change-admin-code-info {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
+    }
+    
+    /* Password Input Group */
+    .password-input-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .password-input-group .form-label {
+        font-weight: 500;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .password-input-wrapper {
+        position: relative;
+    }
+    
+    .password-input-wrapper .form-control {
+        padding-right: 3rem;
+    }
+    
+    .password-toggle-btn {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s;
+        z-index: 10;
+    }
+    
+    .password-toggle-btn:hover {
+        color: var(--text-color);
+    }
+    
+    .password-toggle-btn i {
+        font-size: 1.1rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <h2 class="mb-4"><i class="bi bi-gear"></i> Admin Settings</h2>
+    
+    <!-- System Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ project_sites_count }}</div>
+                <div class="metric-label">Project Sites</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ total_items|format_number }}</div>
+                <div class="metric-label">Total Items</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ total_requests|format_number }}</div>
+                <div class="metric-label">Total Requests</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ today_access|format_number }}</div>
+                <div class="metric-label">Today's Access</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Accordion for Settings Sections -->
+    <div class="accordion" id="adminSettingsAccordion">
+        <!-- Access Code Management -->
+        <div class="accordion-item mb-3">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#accessCodeManagement">
+                    <i class="bi bi-key me-2"></i> Access Code Management
+                </button>
+            </h2>
+            <div id="accessCodeManagement" class="accordion-collapse collapse show" data-bs-parent="#adminSettingsAccordion">
+                <div class="accordion-body">
+                    <!-- Current Admin Code Display -->
+                    {% if current_admin_code %}
+                    <div class="admin-code-display-box mb-4">
+                        <span class="admin-code-label">Admin Code:</span>
+                        <span class="admin-code-value">{{ current_admin_code }}</span>
+                    </div>
+                    {% else %}
+                    <div class="admin-code-display-box mb-4" style="opacity: 0.6;">
+                        <span class="admin-code-label">Admin Code:</span>
+                        <span class="admin-code-value">Not Set</span>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Change Admin Access Code -->
+                    <div class="change-admin-code-section">
+                        <h6 class="change-admin-code-title">
+                            <i class="bi bi-link-45deg me-2"></i> Change Admin Access Code
+                        </h6>
+                        <p class="change-admin-code-info">
+                            Changing the admin access code will affect admin login. Inform your team of the new code.
+                        </p>
+                        <form method="POST" action="{{ url_for('update_global_admin_code') }}" id="updateAdminCodeForm" onsubmit="event.preventDefault(); updateAdminCode(this);">
+                            <div class="password-input-group mb-3">
+                                <label for="new_admin_code" class="form-label">New Admin Code</label>
+                                <div class="password-input-wrapper">
+                                    <input type="password" class="form-control form-control-lg" name="new_code" id="new_admin_code" placeholder="Enter new admin code" required>
+                                    <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('new_admin_code', this)">
+                                        <i class="bi bi-eye" id="password-toggle-icon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                Update Admin Code
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Project Site Management -->
+        <div class="accordion-item mb-3">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#projectSiteManagement">
+                    <i class="bi bi-building me-2"></i> Project Site Management
+                </button>
+            </h2>
+            <div id="projectSiteManagement" class="accordion-collapse collapse" data-bs-parent="#adminSettingsAccordion">
+                <div class="accordion-body">
+                    <!-- Existing Project Sites List -->
+                    {% if project_sites_with_codes %}
+                    <div class="mb-4">
+                        <h6 class="mb-3">Existing Project Sites</h6>
+                        {% for site_data in project_sites_with_codes %}
+                        {% set site = site_data.site %}
+                        <div class="project-site-item">
+                            <div class="project-site-info">
+                                <h5 class="project-site-name mb-0">{{ site.name }}</h5>
+                                {% if site_data.access_code %}
+                                <span class="access-code-display">Access Code: {{ site_data.access_code }}</span>
+                                {% else %}
+                                <span class="text-muted">No access code set</span>
+                                {% endif %}
+                            </div>
+                            <div class="project-site-actions">
+                                <button class="btn btn-sm btn-outline-primary" onclick="editProjectSite({{ site.id }}, '{{ site.name }}', '{{ site.description or '' }}')">
+                                    Edit
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="updateAccessCode('{{ site.name }}', '{{ site_data.access_code or '' }}')">
+                                    Access Code
+                                </button>
+                                <a href="{{ url_for('delete_project_site', site_id=site.id) }}" 
+                                   class="btn btn-sm btn-outline-danger" 
+                                   onclick="return confirm('Are you sure you want to delete {{ site.name }}? This will also delete its access code.')">
+                                    Delete
+                                </a>
+                                <button class="btn btn-sm btn-outline-success" onclick="viewProjectSite({{ site.id }})">
+                                    View
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Add New Project Site -->
+                    <div class="add-project-form">
+                        <h6 class="mb-3">Add New Project Site</h6>
+                        <form method="POST" action="{{ url_for('add_project_site') }}" id="addProjectSiteForm">
+                            <div class="mb-3">
+                                <label class="form-label-bold">Project Site Name:</label>
+                                <input type="text" class="form-control form-control-lg" name="name" placeholder="e.g., Downtown Plaza" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label-bold">Description (Optional):</label>
+                                <textarea class="form-control" name="description" rows="3" placeholder="Brief description of the project site"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label-bold">Access Code (Optional):</label>
+                                <input type="text" class="form-control form-control-lg" name="access_code" placeholder="Enter access code for this site">
+                                <small class="text-muted">If not provided, you can set it later using the "Access Code" button.</small>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-danger btn-lg">
+                                    <i class="bi bi-plus-circle"></i> Add Project Site
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notifications -->
+        <div class="accordion-item mb-3">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#adminNotifications">
+                    <i class="bi bi-bell me-2"></i> Notifications
+                    {% if unread_admin_notifications > 0 %}
+                    <span class="badge bg-danger ms-2">{{ unread_admin_notifications }}</span>
+                    {% endif %}
+                </button>
+            </h2>
+            <div id="adminNotifications" class="accordion-collapse collapse" data-bs-parent="#adminSettingsAccordion">
+                <div class="accordion-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <div class="metric-card">
+                                <div class="metric-value">{{ unread_admin_notifications }}</div>
+                                <div class="metric-label">Unread</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="metric-card">
+                                <div class="metric-value">{{ total_admin_notifications }}</div>
+                                <div class="metric-label">Total</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{{ url_for('notifications') }}" class="btn btn-primary w-100 h-100 d-flex align-items-center justify-content-center">
+                                <i class="bi bi-bell me-2"></i> View All Notifications
+                            </a>
+                        </div>
+                    </div>
+                    
+                    {% if recent_notifications %}
+                    <h6>Recent Notifications</h6>
+                    <div class="list-group" style="max-height: 400px; overflow-y: auto;">
+                        {% for notif in recent_notifications %}
+                        <div class="list-group-item {% if not notif.is_read %}list-group-item-primary{% endif %}">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">
+                                        {% if not notif.is_read %}<span class="badge bg-primary me-2">New</span>{% endif %}
+                                        {{ notif.title }}
+                                    </h6>
+                                    <p class="mb-1">{{ notif.message }}</p>
+                                    <small class="text-muted">{{ notif.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                </div>
+                                {% if not notif.is_read %}
+                                <button class="btn btn-sm btn-outline-primary" onclick="markNotificationRead({{ notif.id }})">
+                                    Mark Read
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-inbox"></i> No notifications yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Access Logs -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accessLogs">
+                    <i class="bi bi-list-check me-2"></i> Access Logs
+                </button>
+            </h2>
+            <div id="accessLogs" class="accordion-collapse collapse" data-bs-parent="#adminSettingsAccordion">
+                <div class="accordion-body">
+                    <a href="{{ url_for('access_logs') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-list-check"></i> View All Logs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Project Site Modal -->
+<div class="modal fade" id="editProjectSiteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Project Site</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('edit_project_site') }}" id="editProjectSiteForm">
+                <div class="modal-body">
+                    <input type="hidden" name="site_id" id="edit_site_id">
+                    <div class="mb-3">
+                        <label class="form-label">Project Site Name:</label>
+                        <input type="text" class="form-control" name="name" id="edit_site_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description:</label>
+                        <textarea class="form-control" name="description" id="edit_site_description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Update Access Code Modal -->
+<div class="modal fade" id="updateAccessCodeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Access Code</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('update_project_site_code') }}" id="updateAccessCodeForm" onsubmit="event.preventDefault(); updateProjectSiteCode(this);">
+                <div class="modal-body">
+                    <input type="hidden" name="project_site" id="modal_project_site">
+                    <div class="mb-3">
+                        <label class="form-label">Project Site: <strong id="modal_site_name"></strong></label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Access Code:</label>
+                        <input type="text" class="form-control" name="new_code" id="modal_access_code" required placeholder="Enter new access code">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Access Code</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function editProjectSite(siteId, siteName, siteDescription) {
+    document.getElementById('edit_site_id').value = siteId;
+    document.getElementById('edit_site_name').value = siteName;
+    document.getElementById('edit_site_description').value = siteDescription || '';
+    const modal = new bootstrap.Modal(document.getElementById('editProjectSiteModal'));
+    modal.show();
+}
+
+function updateAccessCode(siteName, currentCode) {
+    document.getElementById('modal_project_site').value = siteName;
+    document.getElementById('modal_site_name').textContent = siteName;
+    document.getElementById('modal_access_code').value = currentCode || '';
+    const modal = new bootstrap.Modal(document.getElementById('updateAccessCodeModal'));
+    modal.show();
+}
+
+function viewProjectSite(siteId) {
+    // Switch to the project site and show its items
+    // You can implement this to redirect to a filtered view
+    alert('View functionality - switch to this project site to view its data');
+}
+
+function updateProjectSiteCode(form) {
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Access code updated successfully!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('updateAccessCodeModal'));
+            modal.hide();
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to update access code'));
+        }
+    })
+    .catch(error => {
+        alert('Error updating access code');
+        console.error('Error:', error);
+    });
+}
+
+function markNotificationRead(notificationId) {
+    fetch(`/mark_notification_read/${notificationId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error marking notification as read');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error marking notification as read');
+    });
+}
+
+function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+
+function updateAdminCode(form) {
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Admin code updated successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to update admin code'));
+        }
+    })
+    .catch(error => {
+        alert('Error updating admin code');
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}

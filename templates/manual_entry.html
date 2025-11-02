@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4"><i class="bi bi-pencil-square"></i> Manual Entry (Budget Builder)</h2>
+    
+    {% if not can_edit %}
+    <div class="alert alert-warning">
+        <strong>Read-Only Access:</strong> You can view items but cannot add, edit, or delete them.
+    </div>
+    <div class="alert alert-info">
+        Contact an administrator if you need to make changes to the inventory.
+    </div>
+    {% endif %}
+    
+    <!-- Project Context Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Project Context</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('manual_entry') }}" class="row g-3">
+                <div class="col-md-4">
+                    <label for="building_type_select" class="form-label">Building Type</label>
+                    <select class="form-select" id="building_type_select" name="building_type">
+                        <option value="">Select building type</option>
+                        {% for prop_type in property_types %}
+                        <option value="{{ prop_type }}" {% if building_type == prop_type %}selected{% endif %}>{{ prop_type }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Select building type first</small>
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="manual_section_selectbox" class="form-label">Section</label>
+                    <select class="form-select" id="manual_section_selectbox" name="section">
+                        {% for section in construction_sections %}
+                        <option value="{{ section }}" {% if selected_section == section %}selected{% endif %}>{{ section }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Select construction section</small>
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="budget_selectbox" class="form-label">Budget Label</label>
+                    <select class="form-select" id="budget_selectbox" name="budget">
+                        <option value="">Select budget</option>
+                        {% for budget in all_budgets %}
+                        <option value="{{ budget }}" {% if selected_budget == budget %}selected{% endif %}>{{ budget }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Select budget type</small>
+                </div>
+                
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Update Context</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add Item Form -->
+    {% if can_edit %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Add Item</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('manual_entry') }}" id="addItemForm">
+                <input type="hidden" name="building_type" value="{{ building_type }}" id="hidden_building_type">
+                <input type="hidden" name="section" value="{{ selected_section }}">
+                <input type="hidden" name="budget" value="{{ selected_budget }}" id="hidden_budget">
+                
+                <div class="row g-3 mb-3">
+                    <div class="col-md-5">
+                        <label for="manual_name_input" class="form-label">Item Name</label>
+                        <input type="text" class="form-control" id="manual_name_input" name="name" placeholder="e.g., STONE DUST" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="manual_qty_input" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="manual_qty_input" name="qty" value="0" min="0" step="1">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="manual_unit_input" class="form-label">Unit</label>
+                        <input type="text" class="form-control" id="manual_unit_input" name="unit" placeholder="e.g., trips, pcs, bags">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="manual_rate_input" class="form-label">Unit Cost</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₦</span>
+                            <input type="number" class="form-control" id="manual_rate_input" name="unit_cost" value="0" min="0" step="any">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="manual_category_select" class="form-label">Category</label>
+                    <select class="form-select" id="manual_category_select" name="category">
+                        <option value="Materials" selected>Materials</option>
+                        <option value="Labour">Labour</option>
+                        <option value="Material/Labour">Material/Labour</option>
+                    </select>
+                    <small class="text-muted">Select category</small>
+                </div>
+                
+                <div class="line-amount-preview" id="line_amount_display">
+                    Line Amount: ₦0.00
+                </div>
+                
+                <!-- Debug info (visible to admin) -->
+                {% if can_edit %}
+                <div class="alert alert-info mt-3 mb-3" style="font-size: 0.85rem; padding: 0.75rem;">
+                    <strong>📋 Current Context:</strong><br>
+                    <small>Building Type: <strong id="context_building_type">{{ building_type or 'Not selected' }}</strong></small><br>
+                    <small>Section: <strong id="context_section">{{ selected_section or 'Not selected' }}</strong></small><br>
+                    <small>Budget: <strong id="context_budget">{{ selected_budget or 'Not selected' }}</strong></small>
+                </div>
+                {% endif %}
+                
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-plus-circle"></i> Add Item
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Budget View & Totals -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Budget View & Totals</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label for="budget_filter_selectbox" class="form-label">Budget Filter</label>
+                    <select class="form-select" id="budget_filter_selectbox" onchange="this.form.submit()" form="filterForm">
+                        <option value="All" {% if budget_filter == 'All' %}selected{% endif %}>All</option>
+                        {% for budget in all_budgets %}
+                        <option value="{{ budget }}" {% if budget_filter == budget %}selected{% endif %}>{{ budget }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="section_filter_selectbox" class="form-label">Section Filter</label>
+                    <select class="form-select" id="section_filter_selectbox" onchange="this.form.submit()" form="filterForm">
+                        <option value="">All Sections</option>
+                        {% for section in unique_sections %}
+                        <option value="{{ section }}" {% if section_filter == section %}selected{% endif %}>{{ section }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <form id="filterForm" method="GET" action="{{ url_for('manual_entry') }}">
+                <input type="hidden" name="building_type" value="{{ building_type }}">
+                <input type="hidden" name="section" value="{{ selected_section }}">
+                <input type="hidden" name="budget" value="{{ selected_budget }}">
+            </form>
+            
+            {% if items %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Budget</th>
+                            <th>Section</th>
+                            <th>Group</th>
+                            <th>Building Type</th>
+                            <th>Name</th>
+                            <th>Qty</th>
+                            <th>Unit</th>
+                            <th>Unit Cost</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>
+                                {% if item.budget %}
+                                    {{ item.budget }}
+                                {% else %}
+                                    <span class="text-muted" style="font-style: italic;">No budget set</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.section or '-' }}</td>
+                            <td>{{ item.grp or '-' }}</td>
+                            <td>{{ item.building_type or '-' }}</td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ "%.2f"|format(item.qty) }}</td>
+                            <td>{{ item.unit or '-' }}</td>
+                            <td>{{ item.unit_cost|format_currency if item.unit_cost else '-' }}</td>
+                            <td>{{ item.amount|format_currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="line-amount-preview mt-3">
+                Total Amount: {{ total_amount|format_currency }}
+            </div>
+            
+            <a href="{{ url_for('download_budget_view') }}?budget_filter={{ budget_filter }}&section_filter={{ section_filter }}" class="btn btn-success mt-3">
+                <i class="bi bi-download"></i> Download CSV
+            </a>
+            {% else %}
+            <div class="alert alert-info">
+                No items found for the selected filters.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Real-time line amount calculation is handled in main.js
+    
+    // Sync budget and building type from Project Context form to Add Item form
+    document.addEventListener('DOMContentLoaded', function() {
+        const budgetSelect = document.getElementById('budget_selectbox');
+        const buildingTypeSelect = document.getElementById('building_type_select');
+        const sectionSelect = document.getElementById('manual_section_selectbox');
+        const hiddenBudget = document.getElementById('hidden_budget');
+        const hiddenBuildingType = document.getElementById('hidden_building_type');
+        const hiddenSection = document.querySelector('input[name="section"]');
+        const addItemForm = document.getElementById('addItemForm');
+        
+        // Update hidden fields when dropdowns change (before Update Context is clicked)
+        function updateHiddenFields() {
+            if (budgetSelect && hiddenBudget) {
+                hiddenBudget.value = budgetSelect.value || '';
+            }
+            if (buildingTypeSelect && hiddenBuildingType) {
+                hiddenBuildingType.value = buildingTypeSelect.value || '';
+            }
+            if (sectionSelect && hiddenSection) {
+                hiddenSection.value = sectionSelect.value || '';
+            }
+        }
+        
+        // Listen for changes in the Project Context dropdowns
+        if (budgetSelect) {
+            budgetSelect.addEventListener('change', updateHiddenFields);
+        }
+        if (buildingTypeSelect) {
+            buildingTypeSelect.addEventListener('change', updateHiddenFields);
+        }
+        if (sectionSelect) {
+            sectionSelect.addEventListener('change', updateHiddenFields);
+        }
+        
+        // Validate budget and building type are selected before submitting
+        if (addItemForm) {
+            addItemForm.addEventListener('submit', function(e) {
+                // Ensure we have the latest values from dropdowns (in case user changed them)
+                updateHiddenFields();
+                
+                const budgetValue = hiddenBudget ? hiddenBudget.value : '';
+                const buildingTypeValue = hiddenBuildingType ? hiddenBuildingType.value : '';
+                const sectionValue = hiddenSection ? hiddenSection.value : '';
+                
+                // Update context display
+                const contextBudget = document.getElementById('context_budget');
+                const contextBuildingType = document.getElementById('context_building_type');
+                const contextSection = document.getElementById('context_section');
+                
+                if (contextBudget) contextBudget.textContent = budgetValue || 'Not selected';
+                if (contextBuildingType) contextBuildingType.textContent = buildingTypeValue || 'Not selected';
+                if (contextSection) contextSection.textContent = sectionValue || 'Not selected';
+                
+                if (!budgetValue || !buildingTypeValue || !sectionValue) {
+                    e.preventDefault();
+                    alert('❌ Missing required fields!\n\nPlease select in the "Project Context" section:\n1. Building Type\n2. Section\n3. Budget Label\n\nThen click "Update Context" or the form will use your current selections.');
+                    return false;
+                }
+                
+                // Debug: log what's being submitted
+                console.log('✅ Submitting form with:', {
+                    budget: budgetValue,
+                    building_type: buildingTypeValue,
+                    section: sectionValue
+                });
+                
+                // Verify the form data before submission
+                const formData = new FormData(addItemForm);
+                console.log('FormData values:', {
+                    budget: formData.get('budget'),
+                    building_type: formData.get('building_type'),
+                    section: formData.get('section')
+                });
+            });
+        }
+        
+        // Initial sync on page load
+        updateHiddenFields();
+        
+        // Also update on any change to ensure sync
+        setInterval(updateHiddenFields, 1000);
+    });
+</script>
+{% endblock %}
+

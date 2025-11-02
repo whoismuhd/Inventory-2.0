@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .budget-summary-page {
+        padding: 2rem;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-color);
+    }
+    
+    .page-subtitle {
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--text-color);
+    }
+    
+    .metric-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+    
+    .budget-nav-item {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        margin: 0.25rem;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        cursor: pointer;
+        color: var(--text-color);
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .budget-nav-item:hover {
+        background-color: var(--hover-bg);
+        border-color: var(--primary-color);
+    }
+    
+    .budget-nav-item.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+        font-weight: 600;
+    }
+    
+    .amount-display {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin: 1rem 0;
+    }
+    
+    .formula-box {
+        background-color: var(--info-bg);
+        border: 1px solid var(--info-border);
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+        color: var(--info-text);
+    }
+    
+    .config-section {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+    
+    .config-header {
+        padding: 1rem;
+        background-color: var(--hover-bg);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: background-color 0.3s;
+    }
+    
+    .config-header:hover {
+        background-color: var(--border-color);
+    }
+    
+    .config-header i {
+        transition: transform 0.3s;
+    }
+    
+    .config-header[aria-expanded="true"] i {
+        transform: rotate(90deg);
+    }
+    
+    .config-body {
+        padding: 1.5rem;
+        display: none;
+    }
+    
+    .config-body.show {
+        display: block;
+    }
+    
+    .qty-control-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .qty-control-btn {
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--border-color);
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.2s;
+    }
+    
+    .qty-control-btn:hover {
+        background-color: var(--hover-bg);
+        border-color: var(--primary-color);
+    }
+    
+    .qty-input {
+        width: 120px;
+        text-align: center;
+    }
+    
+    .summary-list {
+        list-style: none;
+        padding: 0;
+        margin: 1rem 0;
+    }
+    
+    .summary-list li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-color);
+    }
+    
+    .summary-list li:last-child {
+        border-bottom: none;
+    }
+</style>
+
+<div class="container-fluid budget-summary-page">
+    <!-- Page Header -->
+    <h1 class="page-title">Budget Summary by Building Type</h1>
+    <p class="page-subtitle">Comprehensive overview of all budgets and building types</p>
+    
+    <!-- Quick Overview -->
+    <h2 class="section-title">Quick Overview</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ total_items|format_number }}</div>
+                <div class="metric-label">Total Items</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ total_amount|format_currency }}</div>
+                <div class="metric-label">Total Amount</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ unique_budgets|format_number }}</div>
+                <div class="metric-label">Active Budgets</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ unique_building_types|format_number }}</div>
+                <div class="metric-label">Building Types</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Items Added -->
+    {% if recent_items %}
+    <h2 class="section-title">Recent Items Added</h2>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>name</th>
+                            <th>budget</th>
+                            <th>building_type</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in recent_items %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.budget or '-' }}</td>
+                            <td>{{ item.building_type or '-' }}</td>
+                            <td>{{ item.amount|format_currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Manual Budget Summary -->
+    <h2 class="section-title">Manual Budget Summary</h2>
+    <p class="text-muted mb-3">Add custom budget summary information for each budget number</p>
+    
+    <!-- Available Budgets Navigation -->
+    <div class="mb-4">
+        <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: var(--text-color);">Available Budgets</h3>
+        <div>
+            {% for budget_num in range(1, max_budget_num + 1) %}
+            <a href="{{ url_for('budget_summary', budget=budget_num) }}" 
+               class="budget-nav-item {% if selected_budget_num|string == budget_num|string %}active{% endif %}">
+                Budget {{ budget_num }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Budget Summary Display -->
+    {% if selected_budget_num %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="mb-0" style="color: var(--text-color);">Budget {{ selected_budget_num }} Summary</h3>
+                <a href="{{ url_for('budget_summary', budget=selected_budget_num) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </a>
+            </div>
+            
+            <div class="amount-display">
+                Total Amount for Budget {{ selected_budget_num }}
+            </div>
+            <div class="amount-display" style="color: var(--primary-color);">
+                {{ selected_budget_total|format_currency }}
+            </div>
+            
+            {% if selected_budget_breakdown %}
+            <h4 class="mt-4 mb-3" style="color: var(--text-color);">Breakdown by Building Type</h4>
+            <ul class="summary-list">
+                {% for building_type, amount in selected_budget_breakdown.items() %}
+                <li>
+                    <strong>{{ building_type }}:</strong> {{ amount|format_currency }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Building Type Configurations -->
+    {% for building_type in property_types %}
+    {% set config = building_configs.get(building_type) %}
+    {% set blocks = config.blocks if config else 0 %}
+    {% set units_per_block = config.units_per_block if config else 0 %}
+    {% set notes = config.notes if config else '' %}
+    {% set amount_per_block = amount_per_block_data.get(building_type, 0) %}
+    {% set total_blocks = blocks|int %}
+    {% set total_units = total_blocks * units_per_block|int %}
+    {% set total_for_all_blocks = amount_per_block * total_blocks %}
+    {% set amount_per_unit = amount_per_block / units_per_block|int if units_per_block|int > 0 else 0 %}
+    
+    <div class="config-section">
+        <div class="config-header" onclick="toggleConfig('{{ building_type|lower|replace(' ', '-') }}')" 
+             id="header-{{ building_type|lower|replace(' ', '-') }}">
+            <i class="bi bi-chevron-right"></i>
+            <span>🏠</span>
+            <strong style="color: var(--text-color);">{{ building_type }} Configuration</strong>
+        </div>
+        <div class="config-body" id="config-{{ building_type|lower|replace(' ', '-') }}">
+            <!-- Configuration Form -->
+            <form method="POST" action="{{ url_for('save_building_config') }}" id="form-{{ building_type|lower|replace(' ', '-') }}">
+                <input type="hidden" name="building_type" value="{{ building_type }}">
+                
+                <div class="mb-3">
+                    <label class="form-label">Number of Blocks for {{ building_type }}</label>
+                    <div class="qty-control-group">
+                        <button type="button" class="qty-control-btn" onclick="decrementBlocks('{{ building_type|lower|replace(' ', '-') }}')">-</button>
+                        <input type="number" class="form-control qty-input" 
+                               name="blocks" id="blocks-{{ building_type|lower|replace(' ', '-') }}" 
+                               value="{{ blocks }}" min="0" required>
+                        <button type="button" class="qty-control-btn" onclick="incrementBlocks('{{ building_type|lower|replace(' ', '-') }}')">+</button>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Units per Block for {{ building_type }}</label>
+                    <div class="qty-control-group">
+                        <button type="button" class="qty-control-btn" onclick="decrementUnits('{{ building_type|lower|replace(' ', '-') }}')">-</button>
+                        <input type="number" class="form-control qty-input" 
+                               name="units_per_block" id="units-{{ building_type|lower|replace(' ', '-') }}" 
+                               value="{{ units_per_block }}" min="0" required>
+                        <button type="button" class="qty-control-btn" onclick="incrementUnits('{{ building_type|lower|replace(' ', '-') }}')">+</button>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Additional Notes for {{ building_type }}</label>
+                    <textarea class="form-control" name="notes" rows="3" placeholder="Add any additional budget information or notes...">{{ notes }}</textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-calendar-check"></i> Save {{ building_type }} Configuration
+                </button>
+            </form>
+            
+            <!-- Manual Budget Summary for this Building Type -->
+            {% if amount_per_block > 0 %}
+            <div class="mt-4">
+                <h4 style="color: var(--text-color); font-size: 1.1rem; margin-bottom: 1rem;">
+                    {{ building_type|upper }} BUDGET SUMMARY - BUDGET {{ selected_budget_num }}
+                </h4>
+                
+                <div class="amount-display" style="font-size: 1.8rem; margin-bottom: 0.5rem;">
+                    Amount per Block (FROM DB)
+                </div>
+                <div class="amount-display" style="font-size: 2rem; color: var(--primary-color);">
+                    {{ amount_per_block|format_currency }}
+                </div>
+                
+                {% if total_blocks > 0 %}
+                <div class="amount-display" style="font-size: 1.8rem; margin-top: 1.5rem; margin-bottom: 0.5rem;">
+                    Total for All Blocks
+                </div>
+                <div class="amount-display" style="font-size: 2rem; color: var(--primary-color);">
+                    {{ total_for_all_blocks|format_currency }}
+                </div>
+                
+                <!-- Formula Boxes -->
+                <div class="formula-box mt-3">
+                    <span>💡</span> Formula: Amount per Block = {{ amount_per_block|format_currency }} (from database) × {{ total_blocks }} blocks = {{ total_for_all_blocks|format_currency }}
+                </div>
+                
+                {% if units_per_block|int > 0 %}
+                <div class="formula-box">
+                    <span>💡</span> Per Unit Formula: Amount per Unit = {{ amount_per_block|format_currency }} ÷ {{ units_per_block }} units = {{ amount_per_unit|format_currency }}
+                </div>
+                {% endif %}
+                
+                <!-- Summary List -->
+                <ul class="summary-list mt-3">
+                    <li><strong>GRAND TOTAL FOR 1 BLOCK:</strong> {{ amount_per_block|format_currency }}</li>
+                    <li><strong>GRAND TOTAL FOR {{ total_blocks }} BLOCKS:</strong> {{ total_for_all_blocks|format_currency }}</li>
+                    {% if units_per_block|int > 0 %}
+                    <li><strong>TOTAL FOR 1 UNIT:</strong> {{ amount_per_unit|format_currency }}</li>
+                    <li><strong>GRAND TOTAL FOR ALL {{ building_type|upper }} ({{ total_units }}NOS):</strong> {{ total_for_all_blocks|format_currency }}</li>
+                    {% endif %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function toggleConfig(buildingType) {
+    const configBody = document.getElementById('config-' + buildingType);
+    const header = document.getElementById('header-' + buildingType);
+    
+    if (configBody.classList.contains('show')) {
+        configBody.classList.remove('show');
+        header.setAttribute('aria-expanded', 'false');
+    } else {
+        configBody.classList.add('show');
+        header.setAttribute('aria-expanded', 'true');
+    }
+}
+
+function incrementBlocks(buildingType) {
+    const input = document.getElementById('blocks-' + buildingType);
+    input.value = parseInt(input.value || 0) + 1;
+    updateCalculations(buildingType);
+}
+
+function decrementBlocks(buildingType) {
+    const input = document.getElementById('blocks-' + buildingType);
+    const value = parseInt(input.value || 0);
+    if (value > 0) {
+        input.value = value - 1;
+        updateCalculations(buildingType);
+    }
+}
+
+function incrementUnits(buildingType) {
+    const input = document.getElementById('units-' + buildingType);
+    input.value = parseInt(input.value || 0) + 1;
+    updateCalculations(buildingType);
+}
+
+function decrementUnits(buildingType) {
+    const input = document.getElementById('units-' + buildingType);
+    const value = parseInt(input.value || 0);
+    if (value > 0) {
+        input.value = value - 1;
+        updateCalculations(buildingType);
+    }
+}
+
+function updateCalculations(buildingType) {
+    // Calculations would be updated dynamically if needed
+    // Currently handled server-side
+}
+
+// Auto-expand config if it has data
+document.addEventListener('DOMContentLoaded', function() {
+    {% for building_type in property_types %}
+    {% set config = building_configs.get(building_type) %}
+    {% if config and config.blocks and config.blocks > 0 %}
+    toggleConfig('{{ building_type|lower|replace(" ", "-") }}');
+    {% endif %}
+    {% endfor %}
+});
+</script>
+{% endblock %}

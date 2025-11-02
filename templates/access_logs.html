@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4"><i class="bi bi-list-check"></i> Access Logs</h2>
+    
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('access_logs') }}" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Role Filter</label>
+                    <select class="form-select" name="role_filter" onchange="this.form.submit()">
+                        <option value="All" {% if role_filter == 'All' %}selected{% endif %}>All</option>
+                        <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="project_site" {% if role_filter == 'project_site' %}selected{% endif %}>Project Site</option>
+                        <option value="unknown" {% if role_filter == 'unknown' %}selected{% endif %}>Unknown</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Last N Days</label>
+                    <input type="number" class="form-control" name="days" value="{{ days }}" min="1" max="365" onchange="this.form.submit()">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary d-block">Refresh</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Clear All Logs -->
+    <div class="card mb-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Danger Zone</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <strong>Warning:</strong> This will delete ALL access logs and start fresh. This action cannot be undone!
+            </div>
+            <form method="POST" action="{{ url_for('clear_access_logs') }}" onsubmit="return confirm('Are you sure you want to delete ALL access logs? This cannot be undone!')">
+                <button type="submit" class="btn btn-danger">Clear ALL Logs</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Quick Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ total_logs|format_number }}</div>
+                <div class="metric-label">Total Logs</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ today_access|format_number }}</div>
+                <div class="metric-label">Today's Access</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ failed|format_number }}</div>
+                <div class="metric-label">Failed Attempts</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ unique_users|format_number }}</div>
+                <div class="metric-label">Unique Users</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Access Log Details -->
+    {% if logs.items %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Access Code</th>
+                            <th>Date & Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs.items %}
+                        <tr>
+                            <td>{{ log.user or '-' }}</td>
+                            <td>{{ log.role|capitalize if log.role else '-' }}</td>
+                            <td><code>{{ log.access_code or '-' }}</code></td>
+                            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                {% if log.status == 'Success' %}
+                                <span class="badge bg-success">✓ Success</span>
+                                {% else %}
+                                <span class="badge bg-danger">✗ Failed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if logs.pages > 1 %}
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if logs.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('access_logs', page=logs.prev_num, role_filter=role_filter, days=days) }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    {% for page_num in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == logs.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('access_logs', page=page_num, role_filter=role_filter, days=days) }}">{{ page_num }}</a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                            <span class="page-link">…</span>
+                        {% endif %}
+                    {% endfor %}
+                    {% if logs.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('access_logs', page=logs.next_num, role_filter=role_filter, days=days) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            <small class="text-muted">Showing {{ ((logs.page - 1) * logs.per_page + 1) }}-{{ logs.page * logs.per_page if logs.page * logs.per_page <= total_logs else total_logs }} of {{ total_logs }} logs</small>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No access logs found for the selected filters.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

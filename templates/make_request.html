@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .make-request-page {
+        padding: 2rem;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-color, #212529);
+    }
+    
+    .page-subtitle {
+        font-size: 1rem;
+        color: var(--text-muted, #6c757d);
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--text-color, #212529);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .section-card {
+        background-color: var(--card-bg, #ffffff);
+        border: 1px solid var(--border-color, #dee2e6);
+        border-radius: 8px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .radio-group {
+        display: flex;
+        gap: 2rem;
+        margin-top: 0.5rem;
+    }
+    
+    .radio-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .radio-option input[type="radio"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+    
+    .radio-option label {
+        margin: 0;
+        cursor: pointer;
+        font-size: 1rem;
+        color: var(--text-color, #212529);
+    }
+    
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: var(--text-color, #212529);
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .selected-item-box {
+        background-color: #1e3a5f;
+        border: 1px solid #2563eb;
+        color: #ffffff;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+        display: none;
+    }
+    
+    .selected-item-box.show {
+        display: block;
+    }
+    
+    .quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .qty-button {
+        background-color: var(--card-bg, #ffffff);
+        border: 1px solid var(--border-color, #dee2e6);
+        color: var(--text-color, #212529);
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1.2rem;
+        padding: 0;
+        transition: all 0.2s;
+    }
+    
+    .qty-button:hover {
+        background-color: var(--hover-bg, #f8f9fa);
+    }
+    
+    .price-display {
+        background-color: var(--hover-bg, #f8f9fa);
+        border: 1px solid var(--border-color, #dee2e6);
+        padding: 0.75rem;
+        border-radius: 4px;
+        font-weight: 600;
+        color: var(--text-color, #212529);
+    }
+    
+    .info-icon {
+        cursor: help;
+        color: var(--text-muted, #6c757d);
+    }
+</style>
+
+<div class="container-fluid make-request-page">
+    <!-- Page Header -->
+    <div class="mb-4">
+        <h1 class="page-title">Make a Request</h1>
+        <p class="page-subtitle">Request items for specific building types and budgets</p>
+    </div>
+    
+    {% if not items %}
+    <div class="alert alert-danger">
+        No items available for request
+    </div>
+    {% else %}
+    <form method="POST" action="{{ url_for('make_request') }}" id="requestForm">
+        <!-- Project Context Section -->
+        <div class="section-card">
+            <h2 class="section-title">Project Context</h2>
+            
+            <!-- Section (Radio Buttons) -->
+            <div class="mb-4">
+                <label class="form-label">Section</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="section_materials" name="section" value="materials" checked required>
+                        <label for="section_materials">materials</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="section_labour" name="section" value="labour" required>
+                        <label for="section_labour">labour</label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Building Type -->
+            <div class="mb-4">
+                <label for="building_type" class="form-label">
+                    Building Type
+                    <i class="bi bi-question-circle info-icon" title="Select the building type for this request"></i>
+                </label>
+                <select class="form-select form-select-lg" id="building_type" name="building_type" required>
+                    <option value="">Select building type</option>
+                    {% for prop_type in property_types %}
+                    <option value="{{ prop_type }}">{{ prop_type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Budget -->
+            <div class="mb-4">
+                <label for="budget" class="form-label">
+                    <i class="bi bi-wallet2"></i>
+                    Budget
+                    <i class="bi bi-question-circle info-icon" title="Select the budget category for this request"></i>
+                </label>
+                <select class="form-select form-select-lg" id="budget" name="budget" required>
+                    <option value="">Select budget</option>
+                    {% for budget in all_budgets %}
+                    <option value="{{ budget }}">{{ budget }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <!-- Available Items Section -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-box-seam"></i>
+                Available Items
+            </h2>
+        </div>
+        
+        <!-- Request Details Section -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-clipboard-text"></i>
+                Request Details
+            </h2>
+            
+            <!-- Item Selection -->
+            <div class="mb-4">
+                <label for="item_id" class="form-label">Item</label>
+                <select class="form-select form-select-lg" id="item_id" name="item_id" required>
+                    <option value="">-- Select Item --</option>
+                    {% for item in items %}
+                    <option value="{{ item.id }}" 
+                            data-unit-cost="{{ item.unit_cost or 0 }}" 
+                            data-category="{{ item.category }}" 
+                            data-building-type="{{ item.building_type or '' }}" 
+                            data-budget="{{ item.budget or '' }}"
+                            data-unit="{{ item.unit or '' }}"
+                            data-name="{{ item.name }}">
+                        {{ item.name }} {% if item.qty is defined %}(Available: {{ "%.1f"|format(item.qty) }} {{ item.unit or 'units' }}){% endif %} - {{ item.unit_cost|format_currency if item.unit_cost else '₦0.00' }}
+                    </option>
+                    {% endfor %}
+                </select>
+                
+                <!-- Selected Item Display -->
+                <div class="selected-item-box" id="selectedItemBox">
+                    <strong>Selected Item:</strong> <span id="selectedItemName"></span> | 
+                    <strong>Planned Rate:</strong> <span id="selectedItemRate"></span>
+                </div>
+            </div>
+            
+            <!-- Quantity -->
+            <div class="mb-4">
+                <label for="qty" class="form-label">Quantity to request</label>
+                <div class="quantity-controls">
+                    <button type="button" class="qty-button" onclick="decrementQuantity()">-</button>
+                    <input type="number" class="form-control" id="qty" name="qty" value="1.00" min="0.01" step="0.01" required style="width: 150px; text-align: center;">
+                    <button type="button" class="qty-button" onclick="incrementQuantity()">+</button>
+                </div>
+            </div>
+            
+            <!-- Current Price per Unit (Display Only) -->
+            <div class="mb-4">
+                <label class="form-label">
+                    <i class="bi bi-currency-dollar"></i>
+                    Current Price per Unit
+                    <i class="bi bi-question-circle info-icon" title="Current price per unit of the selected item"></i>
+                </label>
+                <div class="price-display" id="currentPriceDisplay">0,00</div>
+                <input type="hidden" id="current_rate" name="current_rate">
+            </div>
+            
+            <!-- Your Name -->
+            <div class="mb-4">
+                <label for="requested_by" class="form-label">Your Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-lg" id="requested_by" name="requested_by" value="{{ session.user_name or '' }}" placeholder="Enter your full name." required>
+            </div>
+            
+            <!-- Notes -->
+            <div class="mb-4">
+                <label for="note" class="form-label">
+                    Notes <span class="text-danger">*</span>
+                    <i class="bi bi-question-circle info-icon" title="Provide details about why you need this item"></i>
+                </label>
+                <textarea class="form-control" id="note" name="note" rows="4" required placeholder="Please provide details about this request..."></textarea>
+            </div>
+        </div>
+        
+        <!-- Submit Button -->
+        <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-check-circle"></i> Submit Request
+            </button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const itemSelect = document.getElementById('item_id');
+    const qtyInput = document.getElementById('qty');
+    const currentRateInput = document.getElementById('current_rate');
+    const currentPriceDisplay = document.getElementById('currentPriceDisplay');
+    const selectedItemBox = document.getElementById('selectedItemBox');
+    const selectedItemName = document.getElementById('selectedItemName');
+    const selectedItemRate = document.getElementById('selectedItemRate');
+    
+    function updateRequestDetails() {
+        const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+        
+        if (itemSelect.value) {
+            const plannedRate = parseFloat(selectedOption.dataset.unitCost) || 0;
+            const itemName = selectedOption.dataset.name || '';
+            const qty = parseFloat(qtyInput.value) || 0;
+            
+            // Show selected item box
+            selectedItemBox.classList.add('show');
+            selectedItemName.textContent = itemName;
+            selectedItemRate.textContent = formatCurrency(plannedRate);
+            
+            // Update current price display
+            currentPriceDisplay.textContent = formatNumber(plannedRate);
+            currentRateInput.value = plannedRate;
+            
+            // Auto-populate building type and budget if available
+            if (selectedOption.dataset.buildingType) {
+                buildingTypeSelect.value = selectedOption.dataset.buildingType;
+                // Filter budget options after setting building type
+                filterBudgetOptions();
+            }
+            if (selectedOption.dataset.budget) {
+                budgetSelect.value = selectedOption.dataset.budget;
+            }
+            
+            // Auto-select section based on category
+            const category = selectedOption.dataset.category || '';
+            if (category.toLowerCase().includes('material')) {
+                document.getElementById('section_materials').checked = true;
+            } else if (category.toLowerCase().includes('labour') || category.toLowerCase().includes('labor')) {
+                document.getElementById('section_labour').checked = true;
+            }
+        } else {
+            selectedItemBox.classList.remove('show');
+            currentPriceDisplay.textContent = '0,00';
+            currentRateInput.value = '';
+        }
+    }
+    
+    function formatCurrency(amount) {
+        return '₦' + formatNumber(amount);
+    }
+    
+    function formatNumber(num) {
+        return parseFloat(num || 0).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).replace('.', ',');
+    }
+    
+    function incrementQuantity() {
+        const currentValue = parseFloat(qtyInput.value) || 0;
+        qtyInput.value = (currentValue + 0.01).toFixed(2);
+    }
+    
+    function decrementQuantity() {
+        const currentValue = parseFloat(qtyInput.value) || 0.01;
+        if (currentValue > 0.01) {
+            qtyInput.value = (currentValue - 0.01).toFixed(2);
+        }
+    }
+    
+    // Format quantity input on change
+    qtyInput.addEventListener('change', function() {
+        const value = parseFloat(this.value);
+        if (!isNaN(value) && value >= 0.01) {
+            this.value = value.toFixed(2);
+        } else {
+            this.value = '1.00';
+        }
+    });
+    
+    itemSelect.addEventListener('change', updateRequestDetails);
+    
+    // Filter budget dropdown based on selected building type
+    const buildingTypeSelect = document.getElementById('building_type');
+    const budgetSelect = document.getElementById('budget');
+    const allBudgetOptions = [];
+    
+    // Store all budget options
+    {% for budget in all_budgets %}
+    allBudgetOptions.push({
+        value: "{{ budget }}",
+        text: "{{ budget }}"
+    });
+    {% endfor %}
+    
+    function filterBudgetOptions() {
+        const selectedBuildingType = buildingTypeSelect.value;
+        const currentBudgetValue = budgetSelect.value;
+        
+        // Clear existing options except the default
+        budgetSelect.innerHTML = '<option value="">Select budget</option>';
+        
+        if (selectedBuildingType) {
+            // Filter budgets for selected building type
+            const filteredBudgets = allBudgetOptions.filter(option => {
+                // Match format: "Budget N - BuildingType(Subgroup)"
+                return option.text.includes(`- ${selectedBuildingType}(`);
+            });
+            
+            // Add filtered options
+            filteredBudgets.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option.value;
+                opt.textContent = option.text;
+                budgetSelect.appendChild(opt);
+            });
+            
+            // Try to restore previously selected budget if it matches
+            if (currentBudgetValue && currentBudgetValue.includes(`- ${selectedBuildingType}(`)) {
+                budgetSelect.value = currentBudgetValue;
+            }
+        } else {
+            // Show all budgets if no building type selected
+            allBudgetOptions.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option.value;
+                opt.textContent = option.text;
+                budgetSelect.appendChild(opt);
+            });
+        }
+    }
+    
+    // Filter budgets when building type changes
+    if (buildingTypeSelect) {
+        buildingTypeSelect.addEventListener('change', filterBudgetOptions);
+    }
+    
+    // Initialize budget options on page load
+    filterBudgetOptions();
+    
+    // Initialize on page load
+    updateRequestDetails();
+</script>
+{% endblock %}

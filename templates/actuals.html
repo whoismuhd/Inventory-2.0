@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4"><i class="bi bi-calculator"></i> Actuals</h2>
+    
+    {% if not can_edit %}
+    <div class="alert alert-info">
+        <strong>👤 User Access:</strong> You can view actuals but cannot modify them.
+    </div>
+    {% endif %}
+    
+    <!-- Budget Selection -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('actuals') }}">
+                <div class="mb-3">
+                    <label for="budget_select" class="form-label">Choose a budget to view:</label>
+                    <select class="form-select form-select-lg" id="budget_select" name="budget" onchange="this.form.submit()">
+                        <option value="">-- Select Budget --</option>
+                        {% for budget_option in budget_options %}
+                        <option value="{{ budget_option }}" {% if selected_budget == budget_option %}selected{% endif %}>
+                            {{ budget_option }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if selected_budget %}
+    <div class="mb-4">
+        <h3>{{ selected_budget }}</h3>
+        <h4>📊 BUDGET vs ACTUAL COMPARISON</h4>
+    </div>
+    
+    {% if planned_data %}
+    <div class="row g-4">
+        <!-- Planned Budget Column -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">PLANNED BUDGET</h5>
+                </div>
+                <div class="card-body">
+                    {% for category, category_items in planned_data.items() %}
+                    <div class="mb-4">
+                        <h6 class="fw-bold">{{ category }}</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>S/N</th>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th>Unit Cost</th>
+                                        <th>Total Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in category_items %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ item.name }}</td>
+                                        <td>{{ item.qty }}</td>
+                                        <td>{{ item.unit_cost|format_currency if item.unit_cost else '₦0.00' }}</td>
+                                        <td>{{ item.amount|format_currency }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% set category_total = category_items|sum(attribute='amount') %}
+                        <p class="fw-bold mt-2">
+                            <strong>{{ category }} Total: {{ category_total|format_currency }}</strong>
+                        </p>
+                        <hr>
+                    </div>
+                    {% endfor %}
+                    
+                    {% set total_planned = [] %}
+                    {% for category, category_items in planned_data.items() %}
+                        {% for item in category_items %}
+                            {% if total_planned.append(item.amount) %}{% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    <div class="metric-card mt-3">
+                        <div class="metric-value">Total Planned: {{ total_planned|sum|format_currency if total_planned else '₦0.00' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actuals Column -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">ACTUALS</h5>
+                </div>
+                <div class="card-body">
+                    {% if actual_data %}
+                    {% for category, category_actuals in actual_data.items() %}
+                    <div class="mb-4">
+                        <h6 class="fw-bold">{{ category }}</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>S/N</th>
+                                        <th>Item</th>
+                                        <th>Actual Qty</th>
+                                        <th>Actual Cost</th>
+                                        <th>Total Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for actual_item in category_actuals %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ actual_item.item.name }}</td>
+                                        <td>{{ "%.2f"|format(actual_item.qty) if actual_item.qty > 0 else '0.00' }}</td>
+                                        <td>{{ (actual_item.cost / actual_item.qty if actual_item.qty > 0 else 0)|format_currency }}</td>
+                                        <td>{{ actual_item.cost|format_currency }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% set category_total = category_actuals|sum(attribute='cost') %}
+                        <p class="fw-bold mt-2">
+                            <strong>{{ category }} Total: {{ category_total|format_currency }}</strong>
+                        </p>
+                        <hr>
+                    </div>
+                    {% endfor %}
+                    
+                    {% set total_actual = [] %}
+                    {% for category, category_actuals in actual_data.items() %}
+                        {% for actual_item in category_actuals %}
+                            {% if total_actual.append(actual_item.cost) %}{% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    <div class="metric-card mt-3">
+                        <div class="metric-value">Total Actual: {{ total_actual|sum|format_currency if total_actual else '₦0.00' }}</div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No actuals recorded for this budget yet.
+                    </div>
+                    <div class="metric-card mt-3">
+                        <div class="metric-value">Total Actual: ₦0.00</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No items found for this budget.
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-inbox"></i> 📦 No items found for this project site.
+        <br>
+        <small>💡 Add items, create requests, and approve them to see actuals here.</small>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

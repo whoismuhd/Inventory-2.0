@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .notifications-page {
+        padding: 2rem;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .notifications-heading {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+    
+    .notifications-subtitle {
+        font-size: 1.1rem;
+        color: var(--text-muted);
+        margin-bottom: 3rem;
+        line-height: 1.6;
+    }
+    
+    .no-notifications-box {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border: 2px solid #3b82f6;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2.5rem;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+    
+    .no-notifications-box p {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #1e40af;
+        margin: 0;
+    }
+    
+    .info-paragraph {
+        color: var(--text-muted);
+        font-size: 1rem;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+    }
+    
+    .what-youll-see-section {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .what-youll-see-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+    
+    .what-youll-see-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .what-youll-see-list li {
+        padding: 0.75rem 0;
+        padding-left: 2rem;
+        color: var(--text-color);
+        position: relative;
+        line-height: 1.6;
+    }
+    
+    .what-youll-see-list li::before {
+        content: '•';
+        position: absolute;
+        left: 0.5rem;
+        font-size: 1.5rem;
+        color: var(--primary-color);
+        font-weight: bold;
+    }
+    
+    /* Notification items styling */
+    .notification-item {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .notification-item:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+    }
+    
+    .notification-item.unread {
+        border-color: var(--primary-color);
+        background: linear-gradient(135deg, var(--card-bg) 0%, var(--info-bg) 100%);
+    }
+    
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .notification-title-section {
+        flex: 1;
+    }
+    
+    .notification-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .notification-badge {
+        display: inline-block;
+        background: var(--primary-gradient);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .notification-time {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+    
+    .notification-message {
+        color: var(--text-color);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+    
+    .notification-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+</style>
+
+<div class="notifications-page">
+    <h1 class="notifications-heading">Your Notifications</h1>
+    <p class="notifications-subtitle">View all notifications about your requests - approvals, rejections, and submissions</p>
+    
+    {% if notifications %}
+        <div class="notifications-list">
+            {% for notification in notifications %}
+            <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+                <div class="notification-header">
+                    <div class="notification-title-section">
+                        {% if not notification.is_read %}
+                        <span class="notification-badge">New</span>
+                        {% endif %}
+                        <div class="notification-title">{{ notification.title }}</div>
+                    </div>
+                    <div class="notification-time">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                </div>
+                <div class="notification-message">{{ notification.message }}</div>
+                <div class="notification-actions">
+                    {% if not notification.is_read %}
+                    <button class="btn btn-sm btn-primary" onclick="markAsRead({{ notification.id }})">
+                        <i class="bi bi-check"></i> Mark as Read
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('delete_notification', notification_id=notification.id) }}" 
+                       class="btn btn-sm btn-danger" 
+                       onclick="return confirm('Are you sure you want to delete this notification?')">
+                        <i class="bi bi-trash"></i> Delete
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- No Notifications State -->
+        <div class="no-notifications-box">
+            <p>No notifications yet</p>
+        </div>
+        
+        <p class="info-paragraph">
+            You'll receive notifications here when your requests are approved or rejected by an admin.
+        </p>
+        
+        <div class="what-youll-see-section">
+            <h3 class="what-youll-see-title">What you'll see:</h3>
+            <ul class="what-youll-see-list">
+                <li>Approval notifications when an admin approves your request</li>
+                <li>Rejection notifications when an admin rejects your request</li>
+                <li>Submission confirmations when you submit a new request</li>
+            </ul>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function markAsRead(notificationId) {
+    fetch(`/mark_notification_read/${notificationId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}
+

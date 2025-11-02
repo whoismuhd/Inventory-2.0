@@ -1,0 +1,1026 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .inventory-page {
+        padding: 2rem;
+    }
+    
+    .current-inventory-header {
+        margin-bottom: 2rem;
+    }
+    
+    .current-inventory-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .current-inventory-header .header-icon {
+        font-size: 2rem;
+        color: var(--primary-color);
+    }
+    
+    .current-inventory-description {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .metrics-row {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .metric-card-inventory {
+        background: linear-gradient(135deg, var(--card-bg) 0%, var(--hover-bg) 100%);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        flex: 1;
+        min-width: 200px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        position: relative;
+    }
+    
+    .metric-card-inventory::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary-gradient);
+    }
+    
+    .metric-label-small {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .metric-value-large {
+        font-size: 2rem;
+        font-weight: 700;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .info-icon {
+        color: var(--text-muted);
+        cursor: help;
+        font-size: 0.9rem;
+    }
+    
+    .filters-section {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .filters-section h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+    
+    .filters-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    @media (max-width: 992px) {
+        .filters-row {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-label {
+        font-weight: 500;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .filter-status {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
+    
+    .filter-status .check-icon {
+        color: var(--success-text);
+        margin-right: 0.5rem;
+    }
+    
+    .inventory-table-section {
+        margin-bottom: 2rem;
+    }
+    
+    .inventory-table-section h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+    
+    .inventory-table {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table thead {
+        background: var(--primary-gradient);
+        color: white;
+    }
+    
+    .table tbody tr {
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .table tbody tr:hover {
+        background-color: var(--hover-bg);
+    }
+    
+    .download-button-section {
+        margin-top: 1.5rem;
+        text-align: center;
+    }
+    
+    .item-management-section {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .item-management-section h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+    
+    .confirm-checkbox {
+        margin-bottom: 1.5rem;
+    }
+    
+    .select-items-section {
+        margin-top: 1.5rem;
+    }
+    
+    .select-items-section h4 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+    
+    .items-checkbox-list {
+        background-color: var(--card-bg);
+    }
+    
+    .item-checkbox-item {
+        transition: background-color 0.2s;
+    }
+    
+    .item-checkbox-item:hover {
+        background-color: var(--hover-bg);
+    }
+    
+    .item-checkbox-item:last-child {
+        border-bottom: none !important;
+    }
+    
+    .item-checkbox-item label {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    kbd {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 0.2rem 0.4rem;
+        font-family: monospace;
+        font-size: 0.85rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        color: var(--text-color);
+    }
+    
+    .individual-management-section {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .info-banner {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border: 2px solid #3b82f6;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        color: #1e40af;
+        font-size: 0.95rem;
+    }
+    
+    .info-banner i {
+        margin-right: 0.5rem;
+    }
+    
+    .edit-items-section h4 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .qty-button {
+        background-color: var(--card-bg);
+        border: 2px solid var(--border-color);
+        color: var(--text-color);
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.2rem;
+        padding: 0;
+        transition: all 0.2s;
+    }
+    
+    .qty-button:hover {
+        background-color: var(--hover-bg);
+        border-color: var(--primary-color);
+    }
+    
+    .quantity-input, .unit-cost-input {
+        width: 150px;
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .change-preview {
+        background-color: var(--hover-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .change-preview h5 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 0.75rem;
+    }
+    
+    .preview-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .preview-label {
+        color: var(--text-muted);
+    }
+    
+    .preview-value {
+        font-weight: 600;
+        color: var(--text-color);
+    }
+    
+    .preview-value.change-positive {
+        color: var(--success-text);
+    }
+    
+    .preview-value.change-negative {
+        color: var(--error-text);
+    }
+</style>
+
+<div class="inventory-page">
+    <!-- Current Inventory Header -->
+    <div class="current-inventory-header">
+        <h1>
+            <i class="bi bi-box-seam header-icon"></i>
+            Current Inventory
+        </h1>
+        <p class="current-inventory-description">View, edit, and manage all inventory items</p>
+    </div>
+    
+    <!-- Metrics -->
+    <div class="metrics-row">
+        <div class="metric-card-inventory">
+            <div class="metric-label-small">
+                Total Items
+                <i class="bi bi-question-circle info-icon" title="Total number of inventory items"></i>
+            </div>
+            <div class="metric-value-large">{{ total_items|format_number }}</div>
+        </div>
+        <div class="metric-card-inventory">
+            <div class="metric-label-small">
+                Total Value
+                <i class="bi bi-question-circle info-icon" title="Total value of all inventory items"></i>
+            </div>
+            <div class="metric-value-large">{{ total_value|format_currency }}</div>
+        </div>
+        <div class="metric-card-inventory">
+            <div class="metric-label-small">
+                Materials
+                <i class="bi bi-question-circle info-icon" title="Number of material items"></i>
+            </div>
+            <div class="metric-value-large">{{ materials_count|format_number }}</div>
+        </div>
+        <div class="metric-card-inventory">
+            <div class="metric-label-small">
+                Labour
+                <i class="bi bi-question-circle info-icon" title="Number of labour items"></i>
+            </div>
+            <div class="metric-value-large">{{ labour_count|format_number }}</div>
+        </div>
+    </div>
+    
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <h3>Filters</h3>
+        <form method="GET" action="{{ url_for('inventory') }}" id="filterForm">
+            <!-- Preserve page number when filtering -->
+            <input type="hidden" name="page" value="1">
+            
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="bi bi-wallet2"></i>
+                        Budget Filter
+                        <i class="bi bi-question-circle info-icon" title="Select budget to filter by"></i>
+                    </label>
+                    <select class="form-select form-select-lg" name="budget_filter" id="budget_filter_select" onchange="submitFilterForm()">
+                        {% for budget in all_budgets %}
+                        <option value="{{ budget }}" {% if budget_filter == budget %}selected{% endif %}>{{ budget }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="bi bi-building"></i>
+                        Section Filter
+                        <i class="bi bi-question-circle info-icon" title="Select section to filter by"></i>
+                    </label>
+                    <select class="form-select form-select-lg" name="section_filter" id="section_filter_select" onchange="submitFilterForm()">
+                        <option value="All" {% if section_filter == 'All' %}selected{% endif %}>All</option>
+                        {% for section in unique_sections %}
+                        <option value="{{ section }}" {% if section_filter == section %}selected{% endif %}>{{ section }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="bi bi-building"></i>
+                        Building Type Filter
+                        <i class="bi bi-question-circle info-icon" title="Select building type to filter by"></i>
+                    </label>
+                    <select class="form-select form-select-lg" name="building_type_filter" id="building_type_filter_select" onchange="submitFilterForm()">
+                        <option value="All" {% if building_type_filter == 'All' %}selected{% endif %}>All</option>
+                        {% for prop_type in property_types %}
+                        <option value="{{ prop_type }}" {% if building_type_filter == prop_type %}selected{% endif %}>{{ prop_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+        <div class="filter-status">
+            <div>Total items before filtering: {{ total_items_before_filtering|format_number }}</div>
+            <div>
+                <i class="bi bi-check-circle-fill check-icon"></i>
+                Final filtered items: <strong>{{ total_items|format_number }} items</strong>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Inventory Items Table -->
+    <div class="inventory-table-section">
+        <h3>Inventory Items</h3>
+        {% if items.items %}
+        <div class="inventory-table">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>id</th>
+                            <th>name</th>
+                            <th>category</th>
+                            <th>unit</th>
+                            <th>Quantity</th>
+                            <th>Unit Cost</th>
+                            <th>budget</th>
+                            <th>section</th>
+                            <th>grp</th>
+                            {% if can_edit %}
+                            <th>Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items.items %}
+                        <tr data-item-id="{{ item.id }}">
+                            <td>{{ item.id }}</td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.category }}</td>
+                            <td>{{ item.unit or '-' }}</td>
+                            <td>{{ item.qty }}</td>
+                            <td>{{ item.unit_cost|format_currency if item.unit_cost else '-' }}</td>
+                            <td>
+                                {% if item.budget %}
+                                    {{ item.budget }}
+                                {% else %}
+                                    <span class="text-muted" style="font-style: italic;">No budget set</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.section or '-' }}</td>
+                            <td>{{ item.grp or '-' }}</td>
+                            {% if can_edit %}
+                            <td>
+                                <button class="btn btn-sm btn-danger delete-item-btn" 
+                                        data-item-id="{{ item.id }}" 
+                                        data-item-name="{{ item.name }}"
+                                        title="Delete this item">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if items.pages > 1 %}
+        <nav class="mt-3">
+            <ul class="pagination justify-content-center">
+                {% if items.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('inventory', page=items.prev_num, budget_filter=budget_filter, section_filter=section_filter, building_type_filter=building_type_filter) }}">Previous</a>
+                </li>
+                {% endif %}
+                {% for page_num in items.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == items.page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('inventory', page=page_num, budget_filter=budget_filter, section_filter=section_filter, building_type_filter=building_type_filter) }}">{{ page_num }}</a>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <span class="page-link">…</span>
+                    {% endif %}
+                {% endfor %}
+                {% if items.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('inventory', page=items.next_num, budget_filter=budget_filter, section_filter=section_filter, building_type_filter=building_type_filter) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        <!-- Download Button -->
+        <div class="download-button-section">
+            <a href="{{ url_for('download_budget_view') }}?budget_filter={{ budget_filter }}&section_filter={{ section_filter }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-download"></i> Download Inventory CSV
+            </a>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-inbox"></i> No items found. Try adjusting your filters.
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Item Management Section -->
+    {% if can_edit %}
+    <div class="item-management-section">
+        <h3>Item Management</h3>
+        
+        <div class="confirm-checkbox">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="require_confirmation" checked>
+                <label class="form-check-label" for="require_confirmation">
+                    Require confirmation for deletes
+                </label>
+            </div>
+        </div>
+        
+        <div class="select-items-section">
+            <h4>Select Items to Delete</h4>
+            <div class="mb-3">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllItems()">
+                    <i class="bi bi-check-all"></i> Select All
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                    <i class="bi bi-x-circle"></i> Clear Selection
+                </button>
+                <span class="ms-3 text-muted" id="selected_count"><strong>0</strong> items selected</span>
+            </div>
+            <div class="items-checkbox-list" style="max-height: 400px; overflow-y: auto; border: 2px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+                {% for item in items.items %}
+                <div class="form-check item-checkbox-item" style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">
+                    <input class="form-check-input item-checkbox" type="checkbox" value="{{ item.id }}" id="item_{{ item.id }}" onchange="updateSelectionCount()">
+                    <label class="form-check-label" for="item_{{ item.id }}" style="cursor: pointer; width: 100%;">
+                        <strong>[{{ item.id }}] {{ item.name }}</strong><br>
+                        <small class="text-muted">{{ item.qty }} {{ item.unit or '' }} @ {{ item.unit_cost|format_currency if item.unit_cost else '₦0.00' }}</small>
+                    </label>
+                </div>
+                {% endfor %}
+                {% if not items.items %}
+                <div class="text-center text-muted p-3">
+                    No items available to delete
+                </div>
+                {% endif %}
+            </div>
+            <div class="mt-3">
+                <button type="button" class="btn btn-danger btn-lg" onclick="deleteSelectedItems(event)" id="deleteSelectedBtn">
+                    <i class="bi bi-trash"></i> Delete Selected Items (<span id="delete_count">0</span>)
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Individual Item Management -->
+    <div class="individual-management-section">
+        <h3>
+            <i class="bi bi-box-seam"></i>
+            Individual Item Management
+        </h3>
+        
+        <div class="info-banner">
+            <i class="bi bi-lightbulb"></i>
+            Use the bulk selection above to manage multiple items, or edit items directly below.
+        </div>
+        
+        <div class="edit-items-section">
+            <h4>
+                <i class="bi bi-pencil"></i>
+                Edit Individual Items
+            </h4>
+            <p class="text-muted mb-3">Select an item to edit (filtered results: {{ total_items|format_number }} items):</p>
+            
+            <div class="mb-3">
+                <label class="filter-label">Choose item to edit:</label>
+                <select class="form-select form-select-lg" id="item_edit_select" onchange="loadItemForEdit(this.value)">
+                    <option value="">-- Select Item --</option>
+                    {% for item in items.items %}
+                    <option value="{{ item.id }}" 
+                            data-qty="{{ item.qty }}" 
+                            data-unit-cost="{{ item.unit_cost or 0 }}"
+                            data-name="{{ item.name }}"
+                            data-unit="{{ item.unit or '' }}">
+                        [{{ item.id }}] {{ item.name }} - {{ item.qty }} {{ item.unit or '' }} @ {{ item.unit_cost|format_currency if item.unit_cost else '₦0.00' }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <form method="POST" action="#" id="editItemForm" onsubmit="event.preventDefault(); updateItem();">
+                <input type="hidden" id="edit_item_id" name="item_id">
+                
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="filter-label">New Quantity</label>
+                        <div class="quantity-controls">
+                            <button type="button" class="qty-button" onclick="decrementQty()">-</button>
+                            <input type="number" class="form-control form-control-lg quantity-input" id="new_qty" name="new_qty" value="0.00" min="0" step="0.01" required>
+                            <button type="button" class="qty-button" onclick="incrementQty()">+</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="filter-label">New Unit Cost</label>
+                        <div class="quantity-controls">
+                            <button type="button" class="qty-button" onclick="decrementUnitCost()">-</button>
+                            <input type="number" class="form-control form-control-lg unit-cost-input" id="new_unit_cost" name="new_unit_cost" value="0.00" min="0" step="any" required>
+                            <button type="button" class="qty-button" onclick="incrementUnitCost()">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="change-preview">
+                    <h5>Change Preview:</h5>
+                    <div class="preview-row">
+                        <span class="preview-label">Old Amount:</span>
+                        <span class="preview-value" id="old_amount">₦0.00</span>
+                    </div>
+                    <div class="preview-row">
+                        <span class="preview-label">New Amount:</span>
+                        <span class="preview-value" id="new_amount">₦0.00</span>
+                    </div>
+                    <div class="preview-row">
+                        <span class="preview-label">Change:</span>
+                        <span class="preview-value" id="change_amount">₦0.00</span>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-lg mt-3">
+                    <i class="bi bi-save"></i> Update Item
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentItem = null;
+
+function loadItemForEdit(itemId) {
+    const select = document.getElementById('item_edit_select');
+    const option = select.options[select.selectedIndex];
+    
+    if (itemId && option) {
+        currentItem = {
+            id: itemId,
+            qty: parseFloat(option.dataset.qty) || 0,
+            unitCost: parseFloat(option.dataset.unitCost) || 0,
+            name: option.dataset.name || '',
+            unit: option.dataset.unit || ''
+        };
+        
+        document.getElementById('edit_item_id').value = itemId;
+        document.getElementById('new_qty').value = currentItem.qty.toFixed(2);
+        document.getElementById('new_unit_cost').value = currentItem.unitCost.toFixed(2);
+        
+        updatePreview();
+    } else {
+        currentItem = null;
+        document.getElementById('edit_item_id').value = '';
+        document.getElementById('new_qty').value = '0.00';
+        document.getElementById('new_unit_cost').value = '0.00';
+        updatePreview();
+    }
+}
+
+function updatePreview() {
+    if (!currentItem) {
+        document.getElementById('old_amount').textContent = '₦0.00';
+        document.getElementById('new_amount').textContent = '₦0.00';
+        document.getElementById('change_amount').textContent = '₦0.00';
+        return;
+    }
+    
+    const oldAmount = currentItem.qty * currentItem.unitCost;
+    const newQty = parseFloat(document.getElementById('new_qty').value) || 0;
+    const newUnitCost = parseFloat(document.getElementById('new_unit_cost').value) || 0;
+    const newAmount = newQty * newUnitCost;
+    const change = newAmount - oldAmount;
+    
+    document.getElementById('old_amount').textContent = formatCurrency(oldAmount);
+    document.getElementById('new_amount').textContent = formatCurrency(newAmount);
+    
+    const changeEl = document.getElementById('change_amount');
+    changeEl.textContent = formatCurrency(Math.abs(change));
+    changeEl.classList.remove('change-positive', 'change-negative');
+    if (change > 0) {
+        changeEl.classList.add('change-positive');
+    } else if (change < 0) {
+        changeEl.classList.add('change-negative');
+    }
+}
+
+function formatCurrency(amount) {
+    return `₦${parseFloat(amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+}
+
+function incrementQty() {
+    const qtyInput = document.getElementById('new_qty');
+    let qty = parseFloat(qtyInput.value) || 0;
+    qty += 1.00;
+    qtyInput.value = qty.toFixed(2);
+    updatePreview();
+}
+
+function decrementQty() {
+    const qtyInput = document.getElementById('new_qty');
+    let qty = parseFloat(qtyInput.value) || 0;
+    qty = Math.max(0, qty - 1.00);
+    qtyInput.value = qty.toFixed(2);
+    updatePreview();
+}
+
+function incrementUnitCost() {
+    const costInput = document.getElementById('new_unit_cost');
+    let cost = parseFloat(costInput.value) || 0;
+    cost += 1.00;
+    costInput.value = cost.toFixed(2);
+    updatePreview();
+}
+
+function decrementUnitCost() {
+    const costInput = document.getElementById('new_unit_cost');
+    let cost = parseFloat(costInput.value) || 0;
+    cost = Math.max(0, cost - 1.00);
+    costInput.value = cost.toFixed(2);
+    updatePreview();
+}
+
+document.getElementById('new_qty').addEventListener('input', updatePreview);
+document.getElementById('new_unit_cost').addEventListener('input', updatePreview);
+
+function updateItem() {
+    const itemId = document.getElementById('edit_item_id').value;
+    const newQty = document.getElementById('new_qty').value;
+    const newUnitCost = document.getElementById('new_unit_cost').value;
+    
+    if (!itemId) {
+        alert('Please select an item to edit');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('new_qty', newQty);
+    formData.append('new_unit_cost', newUnitCost);
+    
+    fetch(`/edit_item/${itemId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Item updated successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to update item'));
+        }
+    })
+    .catch(error => {
+        alert('Error updating item');
+        console.error('Error:', error);
+    });
+}
+
+function selectAllItems() {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateSelectionCount();
+}
+
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelectionCount();
+}
+
+function updateSelectionCount() {
+    const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+    const selectedCount = document.getElementById('selected_count');
+    const deleteCount = document.getElementById('delete_count');
+    
+    const count = checkboxes.length;
+    
+    if (selectedCount) {
+        selectedCount.innerHTML = `<strong style="color: var(--primary-color);">${count}</strong> item${count !== 1 ? 's' : ''} selected`;
+    }
+    
+    if (deleteCount) {
+        deleteCount.textContent = count;
+    }
+}
+
+function deleteSelectedItems(event) {
+    const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one item to delete');
+        return;
+    }
+    
+    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    const requireConfirmation = document.getElementById('require_confirmation');
+    const confirmed = !requireConfirmation || !requireConfirmation.checked || 
+                      confirm(`Are you sure you want to delete ${selectedIds.length} item(s)?\n\nThis action cannot be undone.`);
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    // Disable the button during deletion
+    const deleteBtn = event ? event.target.closest('button') : document.querySelector('button[onclick*="deleteSelectedItems"]');
+    if (deleteBtn) {
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...';
+    }
+    
+    // Delete items one by one and track results
+    let completed = 0;
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    selectedIds.forEach(id => {
+        fetch(`/delete_item/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || 'Failed to delete item');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            completed++;
+            if (data.success) {
+                successCount++;
+            } else {
+                errorCount++;
+                errors.push(`Item ${id}: ${data.error || 'Unknown error'}`);
+            }
+            
+            // Check if all requests are done
+            if (completed === selectedIds.length) {
+                if (deleteBtn) deleteBtn.disabled = false;
+                
+                if (successCount > 0 && errorCount === 0) {
+                    alert(`✅ Successfully deleted ${successCount} item(s)!`);
+                    location.reload();
+                } else if (successCount > 0 && errorCount > 0) {
+                    alert(`⚠️ Deleted ${successCount} item(s) successfully, but ${errorCount} failed:\n\n${errors.join('\n')}`);
+                    location.reload();
+                } else {
+                    alert(`❌ Failed to delete items:\n\n${errors.join('\n')}`);
+                    if (deleteBtn) {
+                        deleteBtn.disabled = false;
+                        deleteBtn.innerHTML = '<i class="bi bi-trash"></i> Delete Selected Items';
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            completed++;
+            errorCount++;
+            errors.push(`Item ${id}: ${error.message || 'Network error'}`);
+            console.error('Error deleting item:', error);
+            
+            // Check if all requests are done
+            if (completed === selectedIds.length) {
+                if (deleteBtn) {
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = '<i class="bi bi-trash"></i> Delete Selected Items';
+                }
+                
+                if (successCount > 0) {
+                    alert(`⚠️ Deleted ${successCount} item(s) successfully, but ${errorCount} failed:\n\n${errors.join('\n')}`);
+                    location.reload();
+                } else {
+                    alert(`❌ Failed to delete items:\n\n${errors.join('\n')}`);
+                }
+            }
+        });
+    });
+}
+
+function submitFilterForm() {
+    // Submit form while preserving all filter values
+    const form = document.getElementById('filterForm');
+    if (form) {
+        form.submit();
+    }
+}
+
+// Individual delete button handlers
+document.addEventListener('DOMContentLoaded', function() {
+    // Update selection count when checkboxes are clicked
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectionCount);
+    });
+    // Initial count update
+    updateSelectionCount();
+    
+    // Attach delete handlers to all delete buttons in the table
+    document.querySelectorAll('.delete-item-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const itemId = this.dataset.itemId;
+            const itemName = this.dataset.itemName || `Item ${itemId}`;
+            
+            if (!confirm(`Are you sure you want to delete "${itemName}"?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            // Disable button during deletion
+            this.disabled = true;
+            const originalHTML = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...';
+            
+            fetch(`/delete_item/${itemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Failed to delete item');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Remove the row from the table
+                    const row = this.closest('tr');
+                    if (row) {
+                        row.style.transition = 'opacity 0.3s';
+                        row.style.opacity = '0';
+                        setTimeout(() => {
+                            row.remove();
+                            // Show success message
+                            alert(`✅ "${itemName}" deleted successfully!`);
+                            // Reload if table is empty
+                            const tbody = document.querySelector('.inventory-table tbody');
+                            if (tbody && tbody.children.length === 0) {
+                                location.reload();
+                            }
+                        }, 300);
+                    } else {
+                        alert(`✅ "${itemName}" deleted successfully!`);
+                        location.reload();
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to delete item');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting item:', error);
+                alert(`❌ Error deleting "${itemName}": ${error.message}`);
+                this.disabled = false;
+                this.innerHTML = originalHTML;
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
