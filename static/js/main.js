@@ -349,3 +349,126 @@ function confirmDelete() {
     return true;
 }
 
+// Session Monitoring - Detect when session changes in another tab
+function initSessionMonitoring() {
+    // Only monitor if we have a session token
+    if (typeof CURRENT_SESSION_TOKEN === 'undefined') {
+        return;
+    }
+    
+    const TAB_ID = localStorage.getItem('tab_id');
+    if (!TAB_ID) {
+        return;
+    }
+    
+    // Store initial session token
+    localStorage.setItem('session_token_' + TAB_ID, CURRENT_SESSION_TOKEN);
+    
+    // Function to check if session has changed
+    function checkSessionChange() {
+        const storedToken = localStorage.getItem('session_token_' + TAB_ID);
+        const lastGlobalToken = localStorage.getItem('last_session_token');
+        
+        // If the global last session token differs from our tab's token, session changed
+        if (lastGlobalToken && storedToken && lastGlobalToken !== storedToken && lastGlobalToken !== CURRENT_SESSION_TOKEN) {
+            // Session was changed in another tab
+            showSessionChangeWarning();
+        }
+    }
+    
+    // Function to show warning when session changes
+    function showSessionChangeWarning() {
+        // Check if warning already shown
+        if (document.getElementById('sessionChangeModal')) {
+            return;
+        }
+        
+        // Create modal warning
+        const modal = document.createElement('div');
+        modal.id = 'sessionChangeModal';
+        modal.className = 'modal fade show';
+        modal.style.display = 'block';
+        modal.setAttribute('data-bs-backdrop', 'static');
+        modal.setAttribute('data-bs-keyboard', 'false');
+        modal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>Session Changed
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-3">
+                            <strong>Your session has been changed in another tab.</strong>
+                        </p>
+                        <p class="text-muted">
+                            Someone logged in with a different account in another browser tab. 
+                            This page will refresh to match the current session.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="window.location.reload()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Add backdrop
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        document.body.appendChild(backdrop);
+        
+        // Auto-refresh after 3 seconds
+        setTimeout(() => {
+            window.location.reload();
+        }, 3000);
+    }
+    
+    // Listen for storage events (triggered when another tab changes localStorage)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'last_session_token') {
+            checkSessionChange();
+        }
+    });
+    
+    // Also check periodically when page is visible (in case storage event doesn't fire)
+    let checkInterval = null;
+    function startPeriodicCheck() {
+        if (checkInterval) return;
+        checkInterval = setInterval(() => {
+            if (!document.hidden) {
+                checkSessionChange();
+            }
+        }, 1000); // Check every second
+    }
+    
+    function stopPeriodicCheck() {
+        if (checkInterval) {
+            clearInterval(checkInterval);
+            checkInterval = null;
+        }
+    }
+    
+    // Start checking when page is visible
+    if (!document.hidden) {
+        startPeriodicCheck();
+    }
+    
+    // Monitor visibility changes
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            stopPeriodicCheck();
+        } else {
+            startPeriodicCheck();
+            checkSessionChange(); // Immediate check when tab becomes visible
+        }
+    });
+    
+    // Initial check
+    checkSessionChange();
+}
+
