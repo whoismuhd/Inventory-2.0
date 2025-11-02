@@ -138,6 +138,16 @@ def login():
         ).first()
         
         if global_admin and check_password_hash(global_admin.code_hash, access_code):
+            # If there's an existing session and user hasn't confirmed override, warn them
+            if existing_session and not override_session:
+                return render_template('login.html', 
+                    error=None,
+                    existing_session=existing_session,
+                    new_login='Global Administrator',
+                    access_code=access_code)
+            
+            # Clear old session completely before setting new one
+            session.clear()
             session['user_id'] = global_admin.id
             session['user_role'] = 'admin'
             session['user_name'] = 'Global Administrator'
@@ -167,6 +177,16 @@ def login():
             ).first()
             
             if site_code and check_password_hash(site_code.code_hash, access_code):
+                # If there's an existing session and user hasn't confirmed override, warn them
+                if existing_session and not override_session:
+                    return render_template('login.html', 
+                        error=None,
+                        existing_session=existing_session,
+                        new_login=f'Admin - {site.name}',
+                        access_code=access_code)
+                
+                # Clear old session completely before setting new one
+                session.clear()
                 session['user_id'] = site_code.id
                 session['user_role'] = 'project_site_admin'  # Single code gives admin access to that site
                 session['user_name'] = f'Admin - {site.name}'
@@ -197,9 +217,9 @@ def login():
         db.session.add(log)
         db.session.commit()
         
-        return render_template('login.html', error='Invalid access code')
+        return render_template('login.html', error='Invalid access code', existing_session=existing_session)
     
-    return render_template('login.html')
+    return render_template('login.html', existing_session=existing_session)
 
 @app.route('/logout')
 def logout():
