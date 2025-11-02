@@ -820,11 +820,87 @@ body {
     }
 }
 
-.tabs-container {
+/* Tabs Container Wrapper - Responsive with Scroll */
+.tabs-container-wrapper {
+    position: relative;
     background: var(--card-bg, #ffffff);
     border-bottom: 2px solid var(--border-color, #e9ecef);
-    padding: 0 2rem;
     transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.tabs-container {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    padding: 0 3rem;
+}
+
+.tabs-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+.tabs-nav-list {
+    display: flex;
+    flex-wrap: nowrap;
+    border-bottom: none;
+    white-space: nowrap;
+    min-width: min-content;
+}
+
+/* Tab Scroll Buttons */
+.tab-scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: var(--card-bg, #ffffff);
+    border: 2px solid var(--border-color, #e9ecef);
+    color: var(--primary-color, #6366f1);
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tabs-container-wrapper:hover .tab-scroll-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.tab-scroll-btn:hover {
+    background: var(--primary-color, #6366f1);
+    color: white;
+    border-color: var(--primary-color, #6366f1);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.tab-scroll-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.tab-scroll-left {
+    left: 0.5rem;
+}
+
+.tab-scroll-right {
+    right: 0.5rem;
+}
+
+.tab-scroll-btn.hidden {
+    display: none;
 }
 
 .nav-tabs {
@@ -837,6 +913,8 @@ body {
     border-bottom: 3px solid transparent;
     padding: 1rem 1.5rem;
     transition: all 0.3s;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .nav-tabs .nav-link:hover {
@@ -849,6 +927,29 @@ body {
     border-bottom-color: var(--primary-start);
     background: none;
     font-weight: 600;
+}
+
+/* Responsive: Enable scrolling on smaller screens */
+@media (max-width: 1200px) {
+    .tabs-container {
+        padding: 0 3.5rem; /* More padding for scroll buttons */
+    }
+    
+    .tab-scroll-btn {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .tabs-container {
+        padding: 0 3rem;
+    }
+    
+    .nav-tabs .nav-link {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
 }
 
 .page-content {

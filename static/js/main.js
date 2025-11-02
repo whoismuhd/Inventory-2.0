@@ -98,7 +98,59 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize theme
     initTheme();
+    
+    // Initialize tab scrolling
+    initTabScrolling();
 });
+
+// Tab Scrolling Functionality
+function initTabScrolling() {
+    const tabsContainer = document.getElementById('tabsContainer');
+    const scrollLeftBtn = document.getElementById('tabScrollLeft');
+    const scrollRightBtn = document.getElementById('tabScrollRight');
+    
+    if (!tabsContainer || !scrollLeftBtn || !scrollRightBtn) return;
+    
+    // Update scroll button visibility
+    function updateScrollButtons() {
+        const isScrollable = tabsContainer.scrollWidth > tabsContainer.clientWidth;
+        const canScrollLeft = tabsContainer.scrollLeft > 0;
+        const canScrollRight = tabsContainer.scrollLeft < (tabsContainer.scrollWidth - tabsContainer.clientWidth - 10);
+        
+        scrollLeftBtn.classList.toggle('hidden', !isScrollable || !canScrollLeft);
+        scrollRightBtn.classList.toggle('hidden', !isScrollable || !canScrollRight);
+    }
+    
+    // Scroll functions
+    function scrollTabs(direction) {
+        const scrollAmount = 200;
+        const currentScroll = tabsContainer.scrollLeft;
+        const newScroll = direction === 'left' 
+            ? currentScroll - scrollAmount 
+            : currentScroll + scrollAmount;
+        
+        tabsContainer.scrollTo({
+            left: newScroll,
+            behavior: 'smooth'
+        });
+    }
+    
+    // Event listeners
+    scrollLeftBtn.addEventListener('click', () => scrollTabs('left'));
+    scrollRightBtn.addEventListener('click', () => scrollTabs('right'));
+    
+    // Update on scroll
+    tabsContainer.addEventListener('scroll', updateScrollButtons);
+    
+    // Update on resize
+    window.addEventListener('resize', updateScrollButtons);
+    
+    // Initial update
+    updateScrollButtons();
+    
+    // Update after a short delay to ensure layout is complete
+    setTimeout(updateScrollButtons, 100);
+}
 
 // Theme Toggle Functionality
 function initTheme() {
