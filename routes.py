@@ -46,22 +46,39 @@ def require_admin(f):
 
 def get_user_project_site():
     """Get current user's project site"""
-    # For global admins, use the selected project site from session
-    # For project site accounts, use their assigned project site (single access code per site)
-    return session.get('project_site')
+    # For global admins, use the selected project site from session (can be None for "All Sites")
+    # For project site accounts, ALWAYS return their assigned project site (cannot be changed)
+    if session.get('is_global_admin'):
+        return session.get('project_site')  # Can be None for global admins
+    else:
+        # Project site admins: get from assigned_site (set at login, cannot be changed)
+        # Fallback to project_site if assigned_site not set (backwards compatibility)
+        return session.get('assigned_project_site') or session.get('project_site')
+
+def get_assigned_project_site():
+    """Get the permanently assigned project site for project site admins"""
+    # This is the project site assigned at login - cannot be changed
+    if session.get('is_global_admin'):
+        return None  # Global admins don't have an assigned site
+    return session.get('assigned_project_site') or session.get('project_site')
 
 def filter_by_project_site(query):
-    """Apply project site filter to query"""
-    project_site = get_user_project_site()
-    # Always filter by project site if one is selected (even for global admins)
+    """Apply project site filter to query - ENFORCES strict separation"""
+    # For project site admins: ALWAYS filter by their assigned site (non-negotiable)
+    if not session.get('is_global_admin'):
+        assigned_site = get_assigned_project_site()
+        if assigned_site:
+            # Project site admins can ONLY see their own site's data
+            return query.filter_by(project_site=assigned_site)
+        else:
+            # If somehow no assigned site, return empty query for security
+            return query.filter_by(project_site=None)  # This will return no results
+    
+    # For global admins: filter by selected project site if one is selected
+    project_site = session.get('project_site')
     if project_site:
         return query.filter_by(project_site=project_site)
-    # If no project site selected and user is not global admin, filter by their assigned site
-    elif not session.get('is_global_admin'):
-        # Project site accounts always have a project site assigned
-        assigned_site = session.get('project_site')
-        if assigned_site:
-            return query.filter_by(project_site=assigned_site)
+    # Global admin with no site selected = see all sites (return unfiltered query)
     return query
 
 def can_edit():
@@ -347,13 +364,23 @@ def delete_item(item_id):
         
         item_name = item.name
         
-        # Check project site permissions
-        project_site = get_user_project_site()
-        if project_site and item.project_site != project_site:
-            if is_post:
-                return jsonify({'error': 'Permission denied: Item belongs to different project site'}), 403
-            flash('Permission denied: Item belongs to different project site', 'error')
-            return redirect(url_for('inventory'))
+        # Security check: Ensure item belongs to current project site
+        # For project site admins, use assigned_project_site (strict check)
+        # For global admins, use selected project site
+        if not session.get('is_global_admin'):
+            assigned_site = get_assigned_project_site()
+            if item.project_site != assigned_site:
+                if is_post:
+                    return jsonify({'error': 'Permission denied: Item belongs to different project site'}), 403
+                flash('Permission denied: Item belongs to different project site', 'error')
+                return redirect(url_for('inventory'))
+        else:
+            project_site = get_user_project_site()
+            if project_site and item.project_site != project_site:
+                if is_post:
+                    return jsonify({'error': 'Permission denied: Item belongs to different project site'}), 403
+                flash('Permission denied: Item belongs to different project site', 'error')
+                return redirect(url_for('inventory'))
         
         db.session.delete(item)
         db.session.commit()
@@ -379,17 +406,28 @@ def delete_all_inventory():
     if request.method == 'POST':
         clear_requests = request.form.get('clear_requests') == 'on'
         
-        # Only delete items for the current project site
-        project_site = get_user_project_site()
-        if project_site:
-            Item.query.filter_by(project_site=project_site).delete()
-            if clear_requests:
-                Request.query.filter_by(project_site=project_site).delete()
+        # STRICT SEPARATION: Project site admins can ONLY delete their own site's data
+        if not session.get('is_global_admin'):
+            assigned_site = get_assigned_project_site()
+            if assigned_site:
+                Item.query.filter_by(project_site=assigned_site).delete()
+                if clear_requests:
+                    Request.query.filter_by(project_site=assigned_site).delete()
+            else:
+                flash('Permission denied: No assigned project site', 'error')
+                return redirect(url_for('inventory'))
         else:
-            # If no project site selected and user is global admin, delete all
-            Item.query.delete()
-            if clear_requests:
-                Request.query.delete()
+            # Global admins: delete based on selected project site (if any)
+            project_site = get_user_project_site()
+            if project_site:
+                Item.query.filter_by(project_site=project_site).delete()
+                if clear_requests:
+                    Request.query.filter_by(project_site=project_site).delete()
+            else:
+                # If no project site selected and user is global admin, delete all
+                Item.query.delete()
+                if clear_requests:
+                    Request.query.delete()
         db.session.commit()
         
         flash('All inventory items deleted successfully!', 'success')
@@ -484,13 +522,9 @@ def review_history():
     status_filter = request.args.get('status_filter', 'Pending')
     active_tab = request.args.get('tab', 'approved')  # approved, rejected, deleted
     
-    # Base query
-    base_query = Request.query
-    
-    # Filter by project site if one is selected
+    # Base query - use filter_by_project_site for strict separation
+    base_query = filter_by_project_site(Request.query)
     project_site = get_user_project_site()
-    if project_site:
-        base_query = base_query.filter_by(project_site=project_site)
     
     if not is_admin():
         # Project site accounts only see their own requests
@@ -511,10 +545,8 @@ def review_history():
     
     requests = filtered_query.order_by(Request.created_at.desc()).paginate(page=1, per_page=20, error_out=False)
     
-    # Statistics - filtered by project site
-    stats_query = Request.query
-    if project_site:
-        stats_query = stats_query.filter_by(project_site=project_site)
+    # Statistics - filtered by project site (strict separation)
+    stats_query = filter_by_project_site(Request.query)
     if not is_admin():
         stats_query = stats_query.filter_by(requested_by=session.get('user_name', ''))
     
@@ -543,6 +575,13 @@ def approve_request(request_id):
         return redirect(url_for('review_history'))
     
     req = Request.query.get_or_404(request_id)
+    
+    # Security check: Project site admins can only approve requests from their own site
+    if not session.get('is_global_admin'):
+        assigned_site = get_assigned_project_site()
+        if req.project_site != assigned_site:
+            flash('Permission denied. You can only approve requests from your assigned project site.', 'error')
+            return redirect(url_for('review_history'))
     req.status = 'Approved'
     req.approved_by = session.get('user_name', 'Unknown')
     req.updated_at = datetime.utcnow()
@@ -603,6 +642,13 @@ def reject_request(request_id):
         return redirect(url_for('review_history'))
     
     req = Request.query.get_or_404(request_id)
+    
+    # Security check: Project site admins can only reject requests from their own site
+    if not session.get('is_global_admin'):
+        assigned_site = get_assigned_project_site()
+        if req.project_site != assigned_site:
+            flash('Permission denied. You can only reject requests from your assigned project site.', 'error')
+            return redirect(url_for('review_history'))
     req.status = 'Rejected'
     req.approved_by = session.get('user_name', 'Unknown')
     req.updated_at = datetime.utcnow()
@@ -639,8 +685,20 @@ def delete_request(request_id):
     """Delete a request and its associated notifications"""
     req = Request.query.get_or_404(request_id)
     
-    # Check permissions
-    can_delete = is_admin() or (req.requested_by == session.get('user_name') and req.status in ['Approved', 'Rejected'])
+    # Check permissions with strict project site separation
+    is_global_admin = session.get('is_global_admin', False)
+    user_is_owner = req.requested_by == session.get('user_name')
+    can_delete_by_status = req.status in ['Approved', 'Rejected']
+    
+    if is_global_admin:
+        can_delete = True  # Global admins can delete any request
+    elif not session.get('is_global_admin'):
+        # Project site admins: can only delete requests from their own site
+        assigned_site = get_assigned_project_site()
+        can_delete = (req.project_site == assigned_site) and (is_admin() or (user_is_owner and can_delete_by_status))
+    else:
+        # Regular users can only delete their own requests
+        can_delete = user_is_owner and can_delete_by_status
     
     if not can_delete:
         flash('Permission denied', 'error')
@@ -675,6 +733,13 @@ def approve_reject_by_id():
     
     try:
         req = Request.query.get_or_404(int(request_id))
+        
+        # Security check: Project site admins can only approve/reject requests from their own site
+        if not session.get('is_global_admin'):
+            assigned_site = get_assigned_project_site()
+            if req.project_site != assigned_site:
+                flash('Permission denied. You can only approve/reject requests from your assigned project site.', 'error')
+                return redirect(url_for('review_history'))
         
         if action == 'approve':
             req.status = 'Approved'
@@ -1275,14 +1340,24 @@ def delete_project_site():
     return redirect(url_for('admin_settings'))
 
 def switch_project_site():
-    """Switch current project site (for global admins)"""
+    """Switch current project site (for global admins ONLY)"""
+    # STRICT CHECK: Only global admins can switch project sites
     if not session.get('is_global_admin'):
-        flash('Permission denied', 'error')
+        flash('Permission denied. Only global administrators can switch project sites.', 'error')
+        return redirect(url_for('manual_entry'))
+    
+    # Double-check: Ensure project site admins cannot bypass this
+    if session.get('user_role') == 'project_site_admin':
+        flash('Permission denied. Project site accounts are restricted to their assigned site.', 'error')
         return redirect(url_for('manual_entry'))
     
     if request.method == 'POST':
         project_site = request.form.get('project_site', '').strip()
+        # For global admins, project_site can be None (all sites) or a specific site
         session['project_site'] = project_site if project_site else None
+        # assigned_project_site should NOT exist for global admins
+        if 'assigned_project_site' in session:
+            session.pop('assigned_project_site', None)
         flash(f'Switched to project site: {project_site if project_site else "All Sites"}', 'success')
         
         # Redirect back to referrer if available, otherwise to manual entry

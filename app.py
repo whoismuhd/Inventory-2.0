@@ -168,6 +168,7 @@ def login():
                 session['user_role'] = 'project_site_admin'  # Single code gives admin access to that site
                 session['user_name'] = f'Admin - {site.name}'
                 session['project_site'] = site.name
+                session['assigned_project_site'] = site.name  # Permanently assigned, cannot be changed
                 session['is_global_admin'] = False
                 
                 log = AccessLog(
