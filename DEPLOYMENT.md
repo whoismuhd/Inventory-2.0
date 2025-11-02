@@ -60,7 +60,9 @@ In the "Environment" section of your Web Service, add these variables:
 2. **DATABASE_URL** (Required):
    - Copy the "Internal Database URL" from your PostgreSQL database
    - It should look like: `postgresql://user:password@hostname/dbname`
+   - Example: `postgresql://istrompostgre_zgkc_user:X7tmMF5MDpxAPAAhaGFuiZs6q3EeIxDd@dpg-d43q673ipnbc73c7fjlg-a/istrompostgre_zgkc`
    - Render automatically sets this, but you can also link the database
+   - **Important**: Use the "Internal Database URL", NOT the "External Database URL"
 
 3. **PYTHON_VERSION** (Optional but recommended):
    - Value: `3.11.0` or `3.12.0`
