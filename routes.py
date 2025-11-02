@@ -310,10 +310,17 @@ def edit_item(item_id):
     if not item:
         return jsonify({'error': f'Item with ID {item_id} not found'}), 404
     
-    # Check project site permissions
-    project_site = get_user_project_site()
-    if project_site and item.project_site != project_site:
-        return jsonify({'error': 'Permission denied: Item belongs to different project site'}), 403
+    # Security check: Ensure item belongs to current project site
+    # For project site admins, use assigned_project_site (strict check)
+    # For global admins, use selected project site
+    if not session.get('is_global_admin'):
+        assigned_site = get_assigned_project_site()
+        if item.project_site != assigned_site:
+            return jsonify({'error': 'Permission denied: Item belongs to different project site'}), 403
+    else:
+        project_site = get_user_project_site()
+        if project_site and item.project_site != project_site:
+            return jsonify({'error': 'Permission denied: Item belongs to different project site'}), 403
     
     if request.method == 'POST':
         try:
